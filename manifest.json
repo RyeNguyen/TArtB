@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "TArtB - Art New Tab",
+  "version": "1.0.0",
+  "description": "A beautiful new tab page featuring artwork from world-renowned museums",
+  "permissions": ["declarativeNetRequest", "declarativeNetRequestWithHostAccess", "storage"],
+  "host_permissions": [
+    "https://firestore.googleapis.com/*",
+    "https://tartb-e4608.firebaseapp.com/*",
+    "https://api.artic.edu/*",
+    "https://www.artic.edu/*",
+    "https://collectionapi.metmuseum.org/*",
+    "https://images.metmuseum.org/*",
+    "https://www.wikiart.org/*",
+    "https://uploads0.wikiart.org/*",
+    "https://uploads1.wikiart.org/*",
+    "https://uploads2.wikiart.org/*",
+    "https://uploads3.wikiart.org/*",
+    "https://uploads4.wikiart.org/*",
+    "https://uploads5.wikiart.org/*",
+    "https://uploads6.wikiart.org/*",
+    "https://uploads7.wikiart.org/*",
+    "https://uploads8.wikiart.org/*",
+    "https://uploads9.wikiart.org/*"
+  ],
+  "declarative_net_request": {
+  "rule_resources": [{
+    "id": "ruleset_1",
+    "enabled": true,
+    "path": "rules.json"
+  }]
+},
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "TArtB Settings"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https://www.artic.edu https://images.metmuseum.org https://collectionapi.metmuseum.org https://www.wikiart.org https://*.wikiart.org data: blob:;"
+  }
+}

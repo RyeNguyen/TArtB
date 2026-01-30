@@ -1,0 +1,86 @@
+{
+  "widgets": {
+    "clock": "Đồng hồ",
+    "artworkInfo": "Tác phẩm",
+    "toDo": "Việc cần làm"
+  },
+  "settings": {
+    "categories": {
+      "clock": "Đồng hồ",
+      "artwork": "Hoạ phẩm",
+      "other": "Khác"
+    },
+    "clock": {
+      "showClock": "Hiển thị đồng hồ",
+      "showDate": "Hiển thị ngày",
+      "clockType": "Loại đồng hồ",
+      "digital": "Điện tử",
+      "analog": "Kim",
+      "timeFormat": "Định dạng thời gian",
+      "showGreeting": "Hiển thị lời chào"
+    }
+  },
+  "greetings": {
+    "morning": {
+      "title": "Chào buổi sáng!",
+      "subtitle": "Ngày hôm nay thuộc về bạn"
+    },
+    "afternoon": {
+      "title": "Chào buổi chiều!",
+      "subtitle": "Giữ tập trung, giữ cảm hứng"
+    },
+    "evening": {
+      "title": "Chào buổi tối!",
+      "subtitle": "Đến lúc lắng xuống rồi"
+    },
+    "night": {
+      "title": "Chúc ngủ ngon!",
+      "subtitle": "Nghỉ ngơi để chuẩn bị cho chặng đường phía trước"
+    }
+  },
+  "toDo": {
+    "priority": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp",
+      "none": "Không",
+      "title": "Độ ưu tiên"
+    },
+    "inputPlaceholder": "Bạn muốn làm gì?",
+    "sortBy": {
+      "date": "Ngày tạo",
+      "dueDate": "Hạn chót",
+      "priority": "Độ ưu tiên",
+      "name": "Tên",
+      "manual": "Thủ công",
+      "title": "Sắp xếp theo"
+    },
+    "myDay": "Ngày của tôi",
+    "groupBy": {
+      "title": "Nhóm theo",
+      "date": "Ngày tạo",
+      "dueDate": "Hạn chót",
+      "priority": "Độ ưu tiên",
+      "tags": "Nhãn",
+      "none": "Không",
+      "today": "Hôm nay",
+      "tomorrow": "Ngày mai",
+      "earlier": "Trước đó",
+      "later": "Sau này",
+      "overdue": "Quá hạn",
+      "upcoming": "Sắp tới",
+      "noDate": "Không có hạn"
+    },
+    "completed": "Hoàn thành",
+    "deadline": {
+      "today": "Hôm nay",
+      "tomorrow": "Ngày mai",
+      "noDate": "Hạn chót"
+    },
+    "detail": {
+      "addTitle": "Thêm tiêu đề...",
+      "addDescription": "Thêm mô tả...",
+      "delete": "Xóa công việc"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --primary-raw: 0.8482 0.1165 68.81;
+  --bg-color: #ffffff;
+  --text-color: 1 0.0197 192.18;
+}
+
+[data-theme="dark"] {
+  --bg-color: #121212;
+  --text-color: #ffffff;
+  --primary-raw: 0.75 0.1 68.81;
+}
+
+[data-theme="lavender"] {
+  --primary-raw: 0.7 0.12 300;
+}
+
+@theme {
+  --color-white: oklch(1 0.0197 192.18);
+  --color-gray-300: oklch(0.4165 0 0);
+  --color-gray-400: oklch(0.3523 0 0);
+  --color-gray-500: oklch(0.3052 0 0);
+  --color-gray-600: oklch(0.252 0 0);
+
+  --color-blue-50: oklch(0.9287 0.0421 215.44);
+  --color-blue-400: oklch(0.7254 0.1135 215.44);
+
+  --color-warning-50: oklch(0.8517 0.08281250000000001 90);
+  --color-warning-400: oklch(0.7923 0.1694 78.01);
+
+  --color-error-50: oklch(0.784 0.0812 23.59);
+  --color-error-400: oklch(0.6904 0.1752 27.55);
+
+  --color-primary-300: oklch(var(--primary-raw));
+
+  --color-text-color: oklch(var(--text-color));
+
+  --text-6xl: 4rem;
+  --text-6xl--line-height: auto;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family:
+    "Oswald",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

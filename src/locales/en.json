@@ -1,0 +1,101 @@
+{
+  "widgets": {
+    "clock": "Clock",
+    "artworkInfo": "Artwork",
+    "toDo": "To Do"
+  },
+  "settings": {
+    "categories": {
+      "clock": "Clock",
+      "artwork": "Artwork",
+      "productivity": "Productivity",
+      "other": "Other"
+    },
+    "artwork": {
+      "showArtworkInfo": "Show Artwork Info"
+    },
+    "clock": {
+      "showClock": "Show Clock",
+      "showDate": "Show Date",
+      "clockType": "Clock Type",
+      "digital": "Digital",
+      "analog": "Analog",
+      "timeFormat": "Time Format",
+      "12hour": "12-hour",
+      "24hour": "24-hour",
+      "showGreeting": "Show Greeting"
+    },
+    "productivity": {
+      "showToDo": "Show To Do List"
+    },
+    "other": {
+      "displayLanguage": "Display Language",
+      "english": "English",
+      "vietnamese": "Vietnamese"
+    }
+  },
+  "greetings": {
+    "morning": {
+      "title": "Good Morning!",
+      "subtitle": "The day is yours"
+    },
+    "afternoon": {
+      "title": "Good Afternoon!",
+      "subtitle": "Stay focused, stay inspired"
+    },
+    "evening": {
+      "title": "Good Evening!",
+      "subtitle": "Time to wind down"
+    },
+    "night": {
+      "title": "Good Night!",
+      "subtitle": "Rest for the journey ahead"
+    }
+  },
+  "toDo": {
+    "inputPlaceholder": "What would you like to do?",
+    "myDay": "My Day",
+    "priority": {
+      "title": "Priority",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "none": "None"
+    },
+    "sortBy": {
+      "title": "Sort by",
+      "date": "Created Date",
+      "dueDate": "Due Date",
+      "priority": "Priority",
+      "name": "Name",
+      "manual": "Manual"
+    },
+    "groupBy": {
+      "title": "Group by",
+      "date": "Created Date",
+      "dueDate": "Due Date",
+      "priority": "Priority",
+      "tags": "Tags",
+      "none": "None",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "earlier": "Earlier",
+      "later": "Later",
+      "overdue": "Overdue",
+      "upcoming": "Upcoming",
+      "noDate": "No Date"
+    },
+    "completed": "Completed",
+    "deadline": {
+      "clear": "Clear",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "noDate": "Due Date"
+    },
+    "detail": {
+      "addTitle": "Add title...",
+      "addDescription": "Add description...",
+      "delete": "Delete task"
+    }
+  }
+}
