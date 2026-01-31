@@ -122,12 +122,12 @@ export const ToDoList = () => {
       (c) => !String(c.id).startsWith("group-"),
     );
 
-    // If we have task collisions, prefer those
+    // If have task collisions, prefer those
     if (taskCollisions.length > 0) {
       return taskCollisions;
     }
 
-    // If we're over a group but not over a task, return the group
+    // If over a group but not over a task, return the group
     if (groupCollision) {
       return [groupCollision];
     }
@@ -253,7 +253,6 @@ export const ToDoList = () => {
     setOverGroupId(null);
   }, []);
 
-  // Determine if this is a cross-group drag
   const isCrossGroupDrag =
     activeGroupId !== null &&
     overGroupId !== null &&
@@ -296,9 +295,7 @@ export const ToDoList = () => {
           </DroppableGroup>
         ))}
 
-        <DragOverlay dropAnimation={null}>
-          {/* {activeTask ? <TaskDragOverlay task={activeTask} /> : null} */}
-        </DragOverlay>
+        <DragOverlay dropAnimation={null} />
       </DndContext>
     </div>
   );

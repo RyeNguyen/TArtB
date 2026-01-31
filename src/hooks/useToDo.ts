@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { useDebounce } from "./useDebounce";
 import { useTranslation } from "react-i18next";
 import { useTodoStore } from "@stores/todoStore";
 import { useSettingsStore } from "@stores/settingsStore";
@@ -8,7 +9,7 @@ import {
   TaskPriorityType,
   TaskGroupBy,
 } from "@constants/common";
-import { Task } from "@/types/toDo";
+import { Task, TaskList } from "@/types/toDo";
 import { getPriorityConfig } from "@constants/toDoConfig";
 
 export interface TaskGroup {
@@ -27,11 +28,13 @@ export const useTodo = () => {
     tasks,
     isLoaded,
     loadData,
+    searchList,
     addTask,
     addList,
     toggleTask,
     getTasksByList,
     reorderTaskInGroup,
+    normalizeTaskOrders,
   } = useTodoStore();
 
   const toDoSettings = settings.widgets[WidgetId.TODO];
@@ -44,9 +47,42 @@ export const useTodo = () => {
   );
   const [deadline, setDeadline] = useState<number | undefined>(undefined);
 
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<TaskList[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm);
+
   useEffect(() => {
     if (!isLoaded) loadData();
   }, [isLoaded, loadData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const debounceSearch = () => {
+      if (!debouncedSearchTerm.trim()) {
+        setSearchResults(lists);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+
+      searchList(debouncedSearchTerm).then((results) => {
+        if (!cancelled) {
+          setSearchResults(results);
+          setIsSearching(false);
+        }
+      });
+    };
+
+    debounceSearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchTerm, searchList, lists]);
 
   const handleUpdateSetting = useCallback(
     (key: string, value: any) => {
@@ -274,6 +310,19 @@ export const useTodo = () => {
     }
   };
 
+  const handleAddList = async () => {
+    if (!searchTerm.trim()) return;
+
+    await addList(searchTerm).then((newListId) => {
+      handleUpdateSetting("selectedListId", newListId);
+    });
+    setSearchTerm("");
+  };
+
+  const handleSelectList = (listId: string) => {
+    handleUpdateSetting("selectedListId", listId);
+  }
+
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || !selectedListId) return;
@@ -296,11 +345,14 @@ export const useTodo = () => {
       targetGroupId: string,
       sourceGroupId: string,
     ) => {
-      // Auto-switch to MANUAL sort when dragging with deterministic sorts
-      if (
-        toDoSettings.sortBy === TaskSortBy.DATE ||
-        toDoSettings.sortBy === TaskSortBy.TITLE
-      ) {
+      // Always switch to MANUAL when dragging (unless already MANUAL)
+      // This ensures the drag position is fully respected
+      const switchingToManual = toDoSettings.sortBy !== TaskSortBy.MANUAL;
+
+      if (switchingToManual) {
+        // Normalize order fields to match current visual order (0, 1, 2, ...)
+        const currentVisualOrder = filteredTasks.map((t) => t.id);
+        await normalizeTaskOrders(currentVisualOrder);
         handleUpdateSetting("sortBy", TaskSortBy.MANUAL);
       }
 
@@ -311,20 +363,42 @@ export const useTodo = () => {
       if (!targetGroup || !sourceGroup) return;
 
       // Calculate the new order based on target index within the group
+      // When switching to MANUAL, use indices since orders are now 0, 1, 2...
       const targetTasks = targetGroup.tasks.filter((t) => t.id !== taskId);
       let newOrder: number;
 
-      if (targetTasks.length === 0) {
-        newOrder = 0;
-      } else if (targetIndex === 0) {
-        newOrder = targetTasks[0].order - 1;
-      } else if (targetIndex >= targetTasks.length) {
-        newOrder = targetTasks[targetTasks.length - 1].order + 1;
+      if (switchingToManual) {
+        // After normalization, orders are sequential indices
+        // Find the task's current index in filteredTasks to get its normalized order
+        const getTaskOrder = (task: Task) => {
+          const idx = filteredTasks.findIndex((t) => t.id === task.id);
+          return idx >= 0 ? idx : task.order;
+        };
+
+        if (targetTasks.length === 0) {
+          newOrder = 0;
+        } else if (targetIndex === 0) {
+          newOrder = getTaskOrder(targetTasks[0]) - 1;
+        } else if (targetIndex >= targetTasks.length) {
+          newOrder = getTaskOrder(targetTasks[targetTasks.length - 1]) + 1;
+        } else {
+          const prevOrder = getTaskOrder(targetTasks[targetIndex - 1]);
+          const nextOrder = getTaskOrder(targetTasks[targetIndex]);
+          newOrder = (prevOrder + nextOrder) / 2;
+        }
       } else {
-        // Insert between two tasks
-        const prevOrder = targetTasks[targetIndex - 1].order;
-        const nextOrder = targetTasks[targetIndex].order;
-        newOrder = (prevOrder + nextOrder) / 2;
+        // Normal case - use existing order values
+        if (targetTasks.length === 0) {
+          newOrder = 0;
+        } else if (targetIndex === 0) {
+          newOrder = targetTasks[0].order - 1;
+        } else if (targetIndex >= targetTasks.length) {
+          newOrder = targetTasks[targetTasks.length - 1].order + 1;
+        } else {
+          const prevOrder = targetTasks[targetIndex - 1].order;
+          const nextOrder = targetTasks[targetIndex].order;
+          newOrder = (prevOrder + nextOrder) / 2;
+        }
       }
 
       // Determine property updates based on cross-group drag
@@ -354,7 +428,14 @@ export const useTodo = () => {
 
       await reorderTaskInGroup(taskId, newOrder, propertyUpdates);
     },
-    [groupedTasks, reorderTaskInGroup, toDoSettings.sortBy, handleUpdateSetting],
+    [
+      groupedTasks,
+      reorderTaskInGroup,
+      toDoSettings.sortBy,
+      handleUpdateSetting,
+      filteredTasks,
+      normalizeTaskOrders,
+    ],
   );
 
   return {
@@ -377,8 +458,17 @@ export const useTodo = () => {
     deadline,
     setDeadline,
 
+    // Search State
+    searchTerm,
+    setSearchTerm,
+    searchResults,
+    isSearching,
+
     // Actions
+    searchList,
     handleUpdateSetting,
+    handleAddList,
+    handleSelectList,
     handleBlur,
     handleAddTask,
     handleToggleTask,

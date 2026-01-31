@@ -42,8 +42,11 @@ export const ToDoForm = () => {
     const date = new Date(deadline);
     if (isToday(date)) return t("toDo.deadline.today");
     if (isTomorrow(date)) return t("toDo.deadline.tomorrow");
-    const dateFormat = shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
-    return format(date, dateFormat, { locale: localeMap[i18n.language] || enUS });
+    const dateFormat =
+      shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
+    return format(date, dateFormat, {
+      locale: localeMap[i18n.language] || enUS,
+    });
   };
 
   const priorityData = [
@@ -104,7 +107,7 @@ export const ToDoForm = () => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={t("toDo.inputPlaceholder")}
-          className="ml-2 text-gray-300 font-light text-[18px] placeholder:text-grey-300/50 outline-none"
+          className="ml-2 text-gray-300 font-light text-sz-default placeholder:text-grey-300/50 outline-none"
         />
         {/* {isInputFocused && ( */}
         <div className="flex gap-2">

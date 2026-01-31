@@ -38,6 +38,9 @@
 
   --text-6xl: 4rem;
   --text-6xl--line-height: auto;
+  --text-sz-default: 18px;
+  --text-sz-large: 20px;
+  --text-sz-small: 14px;
 }
 
 body {

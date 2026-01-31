@@ -1,9 +1,5 @@
 import React, { ReactNode, useState } from "react";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@atoms/Popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@atoms/Popover";
 import { ItemProps } from "@/types/common";
 import { Typography } from "@atoms/Typography";
 
@@ -11,7 +7,7 @@ interface DropdownProps {
   children: ReactNode;
   data: ItemProps[];
   value?: string;
-  header?: string;
+  header?: ReactNode;
   onChange?: (value: string) => void;
   className?: string;
   triggerClassName?: string;
@@ -23,7 +19,7 @@ export const Dropdown = ({
   children,
   data = [],
   value,
-  header = "",
+  header,
   onChange,
   className = "",
   triggerClassName = "",
@@ -43,10 +39,12 @@ export const Dropdown = ({
         <PopoverTrigger className={triggerClassName}>{children}</PopoverTrigger>
 
         <PopoverContent className={`min-w-35 ${menuClassName}`}>
-          {header && (
+          {header && typeof header === "string" ? (
             <Typography className="px-2 py-1 mb-2 border-b border-white/20 uppercase text-text-color">
               {header}
             </Typography>
+          ) : (
+            header
           )}
           {data.map((item) => (
             <DropdownItem

@@ -59,7 +59,6 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     initTask();
   }, [task]);
 
-  // Auto-resize textareas when content changes
   useEffect(() => {
     autoResize(titleRef.current);
   }, [title, autoResize]);
@@ -105,8 +104,11 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     const date = new Date(deadline);
     if (isToday(date)) return t("toDo.deadline.today");
     if (isTomorrow(date)) return t("toDo.deadline.tomorrow");
-    const dateFormat = shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
-    return format(date, dateFormat, { locale: localeMap[i18n.language] || enUS });
+    const dateFormat =
+      shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
+    return format(date, dateFormat, {
+      locale: localeMap[i18n.language] || enUS,
+    });
   };
 
   const priorityData = [

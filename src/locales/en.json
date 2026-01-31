@@ -62,6 +62,10 @@
       "low": "Low",
       "none": "None"
     },
+    "list": {
+      "searchPlaceholder": "Search list...",
+      "createNew": "Create new list {{listName}}"
+    },
     "sortBy": {
       "title": "Sort by",
       "date": "Created Date",

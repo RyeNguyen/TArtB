@@ -1,9 +1,10 @@
-import { Task, TaskList, TodoData } from "@/types/toDo";
+import { Tag, Task, TaskList, TodoData } from "@/types/toDo";
 
 export interface TodoService {
   load(): Promise<TodoData>;
   saveLists(lists: TaskList[]): Promise<void>;
   saveTasks(tasks: Task[]): Promise<void>;
+  saveTags(tags: Tag[]): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -28,20 +29,20 @@ class LocalTodoService implements TodoService {
     if (storage) {
       try {
         const result = await storage.get(STORAGE_KEY);
-        return result[STORAGE_KEY] || { lists: [], tasks: [] };
+        return result[STORAGE_KEY] || { lists: [], tasks: [], tags: [] };
       } catch (error) {
         console.error("Error loading todo data from Chrome storage:", error);
-        return { lists: [], tasks: [] };
+        return { lists: [], tasks: [], tags: [] };
       }
     }
 
     // Fallback to localStorage
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : { lists: [], tasks: [] };
+      return data ? JSON.parse(data) : { lists: [], tasks: [], tags: [] };
     } catch (error) {
       console.error("Error loading todo data from localStorage:", error);
-      return { lists: [], tasks: [] };
+      return { lists: [], tasks: [], tags: [] };
     }
   }
 
@@ -57,8 +58,14 @@ class LocalTodoService implements TodoService {
     await this.save(data);
   }
 
+  async saveTags(tags: Tag[]): Promise<void> {
+    const data = await this.load();
+    data.tags = tags;
+    await this.save(data);
+  }
+
   async clear(): Promise<void> {
-    await this.save({ lists: [], tasks: [] });
+    await this.save({ lists: [], tasks: [], tags: [] });
   }
 
   private async save(data: TodoData): Promise<void> {

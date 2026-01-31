@@ -24,7 +24,15 @@ export interface Task {
   completedAt?: number;
 }
 
+export interface Tag {
+  id: string;
+  title: string;
+  color?: string;
+  createdAt: number;
+}
+
 export interface TodoData {
   lists: TaskList[];
   tasks: Task[];
+  tags: Tag[];
 }

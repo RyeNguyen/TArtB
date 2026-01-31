@@ -46,6 +46,10 @@
       "none": "Không",
       "title": "Độ ưu tiên"
     },
+    "list": {
+      "searchPlaceholder": "Tìm danh sách...",
+      "createNew": "Tạo mới danh sách {{listName}}"
+    },
     "inputPlaceholder": "Bạn muốn làm gì?",
     "sortBy": {
       "date": "Ngày tạo",

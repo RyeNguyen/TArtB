@@ -15,8 +15,8 @@ export const Greeting = () => {
 
   const getGreetingKey = (): DayTimeType => {
     if (hour >= 5 && hour < 12) return DayTimeType.MORNING;
-    if (hour >= 12 && hour < 17) return DayTimeType.AFTERNOON;
-    if (hour >= 17 && hour < 21) return DayTimeType.EVENING;
+    if (hour >= 12 && hour < 18) return DayTimeType.AFTERNOON;
+    if (hour >= 18 && hour < 21) return DayTimeType.EVENING;
     return DayTimeType.NIGHT;
   };
 
