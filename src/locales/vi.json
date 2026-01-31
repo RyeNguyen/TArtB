@@ -86,5 +86,14 @@
       "addDescription": "Thêm mô tả...",
       "delete": "Xóa công việc"
     }
+  },
+  "auth": {
+    "signIn": "Đăng nhập với Google",
+    "signingIn": "Đang đăng nhập...",
+    "signOut": "Đăng xuất",
+    "signingOut": "Đang đăng xuất...",
+    "user": "Người dùng",
+    "syncEnabled": "Đồng bộ đang bật",
+    "syncDisabled": "Chỉ lưu trên máy"
   }
 }

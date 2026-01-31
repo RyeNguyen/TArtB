@@ -7,18 +7,27 @@ import { SettingsSidebar } from "@organisms/Sidebar";
 import { useArtwork } from "@hooks/useArtwork";
 import { Clock } from "@atoms/clock/Clock";
 import { useSettingsStore } from "@stores/settingsStore";
+import { useAuthStore } from "@stores/authStore";
 import { useTranslation } from "react-i18next";
 import { DockStation } from "@molecules/DockStation";
 import { ToDo } from "@organisms/ToDo";
+import { UserProfile } from "@atoms/UserProfile";
 
 function App() {
   const { i18n } = useTranslation();
   const { artwork } = useArtwork();
   const { settings } = useSettingsStore();
+  const { initialize: initializeAuth } = useAuthStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [initialSettingsCategory, setInitialSettingsCategory] = useState<
     string | undefined
   >();
+
+  // Initialize auth listener on app start
+  useEffect(() => {
+    const unsubscribe = initializeAuth();
+    return () => unsubscribe();
+  }, [initializeAuth]);
 
   useEffect(() => {
     i18n.changeLanguage(settings.app.language);
@@ -80,6 +89,11 @@ function App() {
       <ToDo />
 
       <DockStation onOpenSettings={handleOpenSettings} />
+
+      {/* User profile - top right */}
+      <div className="fixed top-4 right-4 z-10">
+        <UserProfile />
+      </div>
 
       <GlassButton
         isIconButton

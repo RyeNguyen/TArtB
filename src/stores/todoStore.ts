@@ -2,18 +2,7 @@ import { create } from "zustand";
 import { Tag, Task, TaskList } from "@/types/toDo";
 import { todoService } from "@services/todo/todoService";
 import { TaskPriorityType } from "@constants/common";
-
-const generateId = (): string => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for older browsers
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
+import { generateId } from "@utils/stringUtils";
 
 interface TodoStore {
   // State
@@ -21,9 +10,14 @@ interface TodoStore {
   tasks: Task[];
   tags: Tag[];
   isLoaded: boolean;
+  isSyncing: boolean;
+  hasInitializedDefaultList: boolean;
 
-  // Initialization
+  // Initialization & Sync
   loadData: () => Promise<void>;
+  onAuthStateChange: (isAuthenticated: boolean) => Promise<void>;
+  setupRealtimeSync: () => void;
+  cleanupRealtimeSync: () => void;
 
   // List actions
   addList: (title: string, color?: string) => Promise<string>;
@@ -62,20 +56,96 @@ interface TodoStore {
   getListById: (id: string) => TaskList | undefined;
 }
 
+// Track real-time sync unsubscribe function outside the store
+let realtimeUnsubscribe: (() => void) | null = null;
+
 export const useTodoStore = create<TodoStore>((set, get) => ({
   lists: [],
   tasks: [],
   tags: [],
   isLoaded: false,
+  isSyncing: false,
+  hasInitializedDefaultList: false,
 
   loadData: async () => {
     const data = await todoService.load();
+    console.log("[TodoStore] Data loaded:", {
+      lists: data.lists.length,
+      tasks: data.tasks.length,
+      tags: data.tags.length,
+    });
     set({
       lists: data.lists,
       tasks: data.tasks,
       tags: data.tags,
       isLoaded: true,
+      // If lists exist, mark as initialized to prevent creating defaults
+      hasInitializedDefaultList: data.lists.length > 0 ? true : get().hasInitializedDefaultList,
     });
+  },
+
+  onAuthStateChange: async (isAuthenticated) => {
+    const { cleanupRealtimeSync, setupRealtimeSync, loadData } = get();
+
+    console.log("[TodoStore] Auth state changed:", { isAuthenticated });
+
+    if (isAuthenticated) {
+      // User just signed in - migrate local data and setup sync
+      set({ isSyncing: true });
+      try {
+        console.log("[TodoStore] Starting migration to Firestore...");
+        await todoService.migrateToFirestore();
+        console.log("[TodoStore] Migration complete, loading data...");
+        await loadData(); // Reload merged data from Firestore
+        console.log("[TodoStore] Data loaded, setting up real-time sync...");
+        setupRealtimeSync();
+        console.log("[TodoStore] Real-time sync setup complete");
+      } catch (error) {
+        console.error("[TodoStore] Error during auth state change (sign in):", error);
+      } finally {
+        set({ isSyncing: false });
+      }
+    } else {
+      // User signed out - cleanup and reload from local
+      console.log("[TodoStore] Cleaning up and reloading local data...");
+      cleanupRealtimeSync();
+      await loadData(); // Reload from local storage
+    }
+  },
+
+  setupRealtimeSync: () => {
+    // Cleanup any existing subscription first
+    if (realtimeUnsubscribe) {
+      realtimeUnsubscribe();
+      realtimeUnsubscribe = null;
+    }
+
+    // Subscribe to real-time updates
+    const unsubscribe = todoService.subscribe((data) => {
+      console.log("[TodoStore] Real-time sync update:", {
+        lists: data.lists.length,
+        tasks: data.tasks.length,
+        tags: data.tags.length,
+      });
+      set({
+        lists: data.lists,
+        tasks: data.tasks,
+        tags: data.tags,
+        // If we received lists from Firestore, mark as initialized to prevent creating defaults
+        hasInitializedDefaultList: data.lists.length > 0 ? true : get().hasInitializedDefaultList,
+      });
+    });
+
+    if (unsubscribe) {
+      realtimeUnsubscribe = unsubscribe;
+    }
+  },
+
+  cleanupRealtimeSync: () => {
+    if (realtimeUnsubscribe) {
+      realtimeUnsubscribe();
+      realtimeUnsubscribe = null;
+    }
   },
 
   addList: async (title, color) => {

@@ -101,5 +101,14 @@
       "addDescription": "Add description...",
       "delete": "Delete task"
     }
+  },
+  "auth": {
+    "signIn": "Sign in with Google",
+    "signingIn": "Signing in...",
+    "signOut": "Sign out",
+    "signingOut": "Signing out...",
+    "user": "User",
+    "syncEnabled": "Sync enabled",
+    "syncDisabled": "Local only"
   }
 }
