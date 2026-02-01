@@ -14,12 +14,15 @@ import TagIcon from "@icons/Tag";
 import { useTranslation } from "react-i18next";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
+import RefreshIcon from "@icons/Refresh";
+import { useMemo } from "react";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 const shortDateFormatMap: Record<string, string> = {
   vi: "d MMM",
   en: "MMM d",
 };
+const CREATE_TAG_VALUE = "createTag";
 
 export const ToDoForm = () => {
   const { t, i18n } = useTranslation();
@@ -32,10 +35,15 @@ export const ToDoForm = () => {
     inputValue,
     setInputValue,
     setIsInputFocused,
+    tagSearchTerm,
+    setTagSearchTerm,
+    loading,
 
     handleAddTask,
     handleBlur,
   } = useTodo();
+
+  const isAdding = loading.isAddingTask;
 
   const getDeadlineLabel = (): string => {
     if (!deadline) return t("toDo.deadline.noDate");
@@ -96,6 +104,22 @@ export const ToDoForm = () => {
     },
   ];
 
+  const tagsData = useMemo(() => {
+    return [
+      {
+        label: (
+          <div className="w-full flex items-center gap-1">
+            <PlusIcon />
+            <Typography className="truncate flex-1">
+              {t("toDo.list.createNew", { listName: tagSearchTerm })}
+            </Typography>
+          </div>
+        ),
+        value: CREATE_TAG_VALUE,
+      },
+    ];
+  }, [t, tagSearchTerm]);
+
   return (
     <form onSubmit={handleAddTask} className="relative flex items-center gap-2">
       <div
@@ -108,6 +132,7 @@ export const ToDoForm = () => {
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={t("toDo.inputPlaceholder")}
           className="ml-2 text-gray-300 font-light text-sz-default placeholder:text-grey-300/50 outline-none"
+          disabled={isAdding}
         />
         {/* {isInputFocused && ( */}
         <div className="flex gap-2">
@@ -137,12 +162,28 @@ export const ToDoForm = () => {
             />
           </Dropdown>
 
-          <Button
-            type="button"
-            textClassName="text-gray-300!"
-            icon={TagIcon}
-            text="None"
-          />
+          <Dropdown
+            data={tagsData}
+            menuClassName="max-w-80"
+            header={
+              <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
+                <RefreshIcon size={16} />
+                <input
+                  value={tagSearchTerm}
+                  placeholder={t("toDo.list.searchPlaceholder")}
+                  className="w-full outline-none text-white font-light text-sz-default"
+                  onChange={(e) => setTagSearchTerm(e.target.value)}
+                />
+              </div>
+            }
+          >
+            <Button
+              type="button"
+              textClassName="text-gray-300!"
+              icon={TagIcon}
+              text="None"
+            />
+          </Dropdown>
         </div>
         {/* )} */}
       </div>
@@ -152,7 +193,14 @@ export const ToDoForm = () => {
         iconColor={COLORS.WHITE}
         type="submit"
         className="p-1! bg-transparent!"
+        disabled={isAdding}
       />
+
+      {isAdding && (
+        <div className="absolute inset-0 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
+        </div>
+      )}
     </form>
   );
 };

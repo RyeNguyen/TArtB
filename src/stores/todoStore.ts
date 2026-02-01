@@ -4,6 +4,18 @@ import { todoService } from "@services/todo/todoService";
 import { TaskPriorityType } from "@constants/common";
 import { generateId } from "@utils/stringUtils";
 
+interface TodoLoadingState {
+  isAddingTask: boolean;
+  isUpdatingTask: boolean;
+  isTogglingTask: boolean;
+  isReorderingTask: boolean;
+  isDeletingTask: boolean;
+  isAddingList: boolean;
+  isUpdatingList: boolean;
+  isDeletingList: boolean;
+  isClearingCompleted: boolean;
+}
+
 interface TodoStore {
   // State
   lists: TaskList[];
@@ -12,6 +24,8 @@ interface TodoStore {
   isLoaded: boolean;
   isSyncing: boolean;
   hasInitializedDefaultList: boolean;
+  loading: TodoLoadingState;
+  setLoading: (key: keyof TodoLoadingState, value: boolean) => void;
 
   // Initialization & Sync
   loadData: () => Promise<void>;
@@ -79,6 +93,21 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   isLoaded: false,
   isSyncing: false,
   hasInitializedDefaultList: false,
+  loading: {
+    isAddingTask: false,
+    isUpdatingTask: false,
+    isTogglingTask: false,
+    isReorderingTask: false,
+    isDeletingTask: false,
+    isAddingList: false,
+    isUpdatingList: false,
+    isDeletingList: false,
+    isClearingCompleted: false,
+  },
+
+  setLoading: (key, value) => {
+    set({ loading: { ...get().loading, [key]: value } });
+  },
 
   loadData: async () => {
     const data = await todoService.load();
@@ -148,68 +177,123 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   addList: async (title, color) => {
-    const now = Date.now();
-    const { lists } = get();
-    const maxOrder =
-      lists.length > 0 ? Math.max(...lists.map((l) => l.order)) : -1;
+    const { lists, setLoading } = get();
+    const previousLists = lists;
 
-    const newList: TaskList = {
-      id: generateId(),
-      title,
-      color,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    setLoading("isAddingList", true);
 
-    const newLists = [...lists, newList];
-    set({ lists: newLists });
-    await todoService.saveLists(newLists);
-    return newList.id;
+    try {
+      const now = Date.now();
+      const maxOrder =
+        lists.length > 0 ? Math.max(...lists.map((l) => l.order)) : -1;
+
+      const newList: TaskList = {
+        id: generateId(),
+        title,
+        color,
+        order: maxOrder + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      set({ lists: [...lists, newList] });
+      await todoService.saveList(newList);
+      return newList.id;
+    } catch (error) {
+      set({ lists: previousLists });
+      console.error("[TodoStore] Error adding list:", error);
+      throw error;
+    } finally {
+      setLoading("isAddingList", false);
+    }
   },
 
   updateList: async (id, updates) => {
-    const { lists } = get();
-    const newLists = lists.map((list) =>
-      list.id === id ? { ...list, ...updates, updatedAt: Date.now() } : list,
-    );
-    set({ lists: newLists });
-    await todoService.saveLists(newLists);
+    const { lists, setLoading } = get();
+    const previousLists = lists;
+    const updatedList = lists.find((list) => list.id === id);
+    if (!updatedList) return;
+
+    setLoading("isUpdatingList", true);
+
+    try {
+      const newList = { ...updatedList, ...updates, updatedAt: Date.now() };
+      set({ lists: lists.map((list) => (list.id === id ? newList : list)) });
+      await todoService.saveList(newList);
+    } catch (error) {
+      set({ lists: previousLists });
+      console.error("[TodoStore] Error updating list:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingList", false);
+    }
   },
 
   deleteList: async (id) => {
-    const { lists, tasks } = get();
-    const newLists = lists.filter((list) => list.id !== id);
-    const newTasks = tasks.filter((task) => task.listId !== id);
-    set({ lists: newLists, tasks: newTasks });
-    await Promise.all([
-      todoService.saveLists(newLists),
-      todoService.saveTasks(newTasks),
-    ]);
+    const { lists, tasks, setLoading } = get();
+    const previousLists = lists;
+    const previousTasks = tasks;
+
+    setLoading("isDeletingList", true);
+
+    try {
+      const taskIdsToDelete = tasks
+        .filter((task) => task.listId === id)
+        .map((task) => task.id);
+
+      set({
+        lists: lists.filter((list) => list.id !== id),
+        tasks: tasks.filter((task) => task.listId !== id),
+      });
+
+      await Promise.all([
+        todoService.deleteListById(id),
+        taskIdsToDelete.length > 0
+          ? todoService.deleteTasks(taskIdsToDelete)
+          : Promise.resolve(),
+      ]);
+    } catch (error) {
+      set({ lists: previousLists, tasks: previousTasks });
+      console.error("[TodoStore] Error deleting list:", error);
+      throw error;
+    } finally {
+      setLoading("isDeletingList", false);
+    }
   },
 
   reorderList: async (id, newOrder) => {
-    const { lists } = get();
+    const { lists, setLoading } = get();
+    const previousLists = lists;
     const list = lists.find((l) => l.id === id);
     if (!list) return;
 
-    const oldOrder = list.order;
-    const newLists = lists.map((l) => {
-      if (l.id === id) {
-        return { ...l, order: newOrder, updatedAt: Date.now() };
-      }
-      // Shift other lists
-      if (newOrder > oldOrder && l.order > oldOrder && l.order <= newOrder) {
-        return { ...l, order: l.order - 1 };
-      }
-      if (newOrder < oldOrder && l.order >= newOrder && l.order < oldOrder) {
-        return { ...l, order: l.order + 1 };
-      }
-      return l;
-    });
+    setLoading("isUpdatingList", true);
 
-    set({ lists: newLists });
-    await todoService.saveLists(newLists);
+    try {
+      const oldOrder = list.order;
+      const newLists = lists.map((l) => {
+        if (l.id === id) {
+          return { ...l, order: newOrder, updatedAt: Date.now() };
+        }
+        // Shift other lists
+        if (newOrder > oldOrder && l.order > oldOrder && l.order <= newOrder) {
+          return { ...l, order: l.order - 1 };
+        }
+        if (newOrder < oldOrder && l.order >= newOrder && l.order < oldOrder) {
+          return { ...l, order: l.order + 1 };
+        }
+        return l;
+      });
+
+      set({ lists: newLists });
+      await todoService.saveLists(newLists);
+    } catch (error) {
+      set({ lists: previousLists });
+      console.error("[TodoStore] Error reordering list:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingList", false);
+    }
   },
 
   searchList: async (searchTerm: string) => {
@@ -221,99 +305,176 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
   // Task actions
   addTask: async (listId, title, options = {}) => {
-    const now = Date.now();
-    const { tasks } = get();
-    const listTasks = tasks.filter((t) => t.listId === listId);
-    const maxOrder =
-      listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
 
-    const newTask: Task = {
-      id: generateId(),
-      listId,
-      title,
-      description: options.description,
-      priority: options.priority || TaskPriorityType.NONE,
-      tags: options.tags,
-      deadline: options.deadline,
-      isCompleted: false,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    setLoading("isAddingTask", true);
 
-    const newTasks = [...tasks, newTask];
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
-    return newTask.id;
+    try {
+      const now = Date.now();
+      const listTasks = tasks.filter((t) => t.listId === listId);
+      const maxOrder =
+        listTasks.length > 0
+          ? Math.max(...listTasks.map((t) => t.order))
+          : -1;
+
+      const newTask: Task = {
+        id: generateId(),
+        listId,
+        title,
+        description: options.description,
+        priority: options.priority || TaskPriorityType.NONE,
+        tags: options.tags,
+        deadline: options.deadline,
+        isCompleted: false,
+        order: maxOrder + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      set({ tasks: [...tasks, newTask] });
+      await todoService.saveTask(newTask);
+      return newTask.id;
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error adding task:", error);
+      throw error;
+    } finally {
+      setLoading("isAddingTask", false);
+    }
   },
 
   updateTask: async (id, updates) => {
-    const { tasks } = get();
-    const newTasks = tasks.map((task) =>
-      task.id === id ? { ...task, ...updates, updatedAt: Date.now() } : task,
-    );
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
+
+    setLoading("isUpdatingTask", true);
+
+    try {
+      const updatedTaskFields = { ...updates, updatedAt: Date.now() };
+
+      set({
+        tasks: tasks.map((task) =>
+          task.id === id ? { ...task, ...updatedTaskFields } : task,
+        ),
+      });
+      await todoService.updateTaskFields(id, updatedTaskFields);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error updating task:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingTask", false);
+    }
   },
 
   deleteTask: async (id) => {
-    const { tasks } = get();
-    const newTasks = tasks.filter((task) => task.id !== id);
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
+
+    setLoading("isDeletingTask", true);
+
+    try {
+      set({ tasks: tasks.filter((task) => task.id !== id) });
+      await todoService.deleteTaskById(id);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error deleting task:", error);
+      throw error;
+    } finally {
+      setLoading("isDeletingTask", false);
+    }
   },
 
   toggleTask: async (id) => {
-    const { tasks } = get();
-    const now = Date.now();
-    const newTasks = tasks.map((task) =>
-      task.id === id
-        ? {
-            ...task,
-            isCompleted: !task.isCompleted,
-            completedAt: !task.isCompleted ? now : undefined,
-            updatedAt: now,
-          }
-        : task,
-    );
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
-  },
-
-  reorderTask: async (id, newOrder) => {
-    const { tasks } = get();
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
 
-    const oldOrder = task.order;
-    const listId = task.listId;
+    setLoading("isTogglingTask", true);
 
-    const newTasks = tasks.map((t) => {
-      if (t.listId !== listId) return t;
+    try {
+      const now = Date.now();
+      const updates = {
+        isCompleted: !task.isCompleted,
+        completedAt: !task.isCompleted ? now : undefined,
+        updatedAt: now,
+      };
 
-      if (t.id === id) {
-        return { ...t, order: newOrder, updatedAt: Date.now() };
-      }
-      // Shift other tasks in the same list
-      if (newOrder > oldOrder && t.order > oldOrder && t.order <= newOrder) {
-        return { ...t, order: t.order - 1 };
-      }
-      if (newOrder < oldOrder && t.order >= newOrder && t.order < oldOrder) {
-        return { ...t, order: t.order + 1 };
-      }
-      return t;
-    });
+      set({
+        tasks: tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      });
+      await todoService.updateTaskFields(id, updates);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error toggling task:", error);
+      throw error;
+    } finally {
+      setLoading("isTogglingTask", false);
+    }
+  },
 
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+  reorderTask: async (id, newOrder) => {
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    setLoading("isReorderingTask", true);
+
+    try {
+      const oldOrder = task.order;
+      const listId = task.listId;
+      const now = Date.now();
+
+      // Collect affected tasks (those that need order updates)
+      const updates: Array<{
+        id: string;
+        order: number;
+        updatedAt: number;
+      }> = [];
+
+      const newTasks = tasks.map((t) => {
+        if (t.listId !== listId) return t;
+
+        if (t.id === id) {
+          updates.push({ id: t.id, order: newOrder, updatedAt: now });
+          return { ...t, order: newOrder, updatedAt: now };
+        }
+        // Shift other tasks in the same list
+        if (newOrder > oldOrder && t.order > oldOrder && t.order <= newOrder) {
+          const newOrderValue = t.order - 1;
+          updates.push({ id: t.id, order: newOrderValue, updatedAt: now });
+          return { ...t, order: newOrderValue, updatedAt: now };
+        }
+        if (newOrder < oldOrder && t.order >= newOrder && t.order < oldOrder) {
+          const newOrderValue = t.order + 1;
+          updates.push({ id: t.id, order: newOrderValue, updatedAt: now });
+          return { ...t, order: newOrderValue, updatedAt: now };
+        }
+        return t;
+      });
+
+      set({ tasks: newTasks });
+      await todoService.updateTasksOrders(updates);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error reordering task:", error);
+      throw error;
+    } finally {
+      setLoading("isReorderingTask", false);
+    }
   },
 
   reorderTaskInGroup: async (id, newOrder, propertyUpdates = {}) => {
-    const { tasks } = get();
-    const now = Date.now();
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
 
-    const newTasks = tasks.map((task) => {
-      if (task.id !== id) return task;
+    setLoading("isReorderingTask", true);
+
+    try {
+      const now = Date.now();
 
       // Apply both the new order and any property updates
       const updates: Partial<Task> = {
@@ -331,63 +492,127 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
         }
       }
 
-      return { ...task, ...updates };
-    });
-
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+      set({
+        tasks: tasks.map((task) =>
+          task.id === id ? { ...task, ...updates } : task,
+        ),
+      });
+      await todoService.updateTaskFields(id, updates);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error reordering task in group:", error);
+      throw error;
+    } finally {
+      setLoading("isReorderingTask", false);
+    }
   },
 
   normalizeTaskOrders: async (taskIds) => {
-    const { tasks } = get();
-    const now = Date.now();
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
 
-    // Create a map of taskId -> new order based on position in taskIds array
-    const orderMap = new Map<string, number>();
-    taskIds.forEach((id, index) => {
-      orderMap.set(id, index);
-    });
+    setLoading("isReorderingTask", true);
 
-    const newTasks = tasks.map((task) => {
-      const newOrder = orderMap.get(task.id);
-      if (newOrder !== undefined && newOrder !== task.order) {
-        return { ...task, order: newOrder, updatedAt: now };
+    try {
+      const now = Date.now();
+
+      // Create a map of taskId -> new order based on position in taskIds array
+      const orderMap = new Map<string, number>();
+      taskIds.forEach((id, index) => {
+        orderMap.set(id, index);
+      });
+
+      // Collect only tasks that actually need updates
+      const updates: Array<{
+        id: string;
+        order: number;
+        updatedAt: number;
+      }> = [];
+
+      const newTasks = tasks.map((task) => {
+        const newOrder = orderMap.get(task.id);
+        if (newOrder !== undefined && newOrder !== task.order) {
+          updates.push({ id: task.id, order: newOrder, updatedAt: now });
+          return { ...task, order: newOrder, updatedAt: now };
+        }
+        return task;
+      });
+
+      set({ tasks: newTasks });
+      if (updates.length > 0) {
+        await todoService.updateTasksOrders(updates);
       }
-      return task;
-    });
-
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error normalizing task orders:", error);
+      throw error;
+    } finally {
+      setLoading("isReorderingTask", false);
+    }
   },
 
   moveTaskToList: async (taskId, newListId) => {
-    const { tasks } = get();
-    const listTasks = tasks.filter((t) => t.listId === newListId);
-    const maxOrder =
-      listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
 
-    const newTasks = tasks.map((task) =>
-      task.id === taskId
-        ? {
-            ...task,
-            listId: newListId,
-            order: maxOrder + 1,
-            updatedAt: Date.now(),
-          }
-        : task,
-    );
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+    setLoading("isUpdatingTask", true);
+
+    try {
+      const listTasks = tasks.filter((t) => t.listId === newListId);
+      const maxOrder =
+        listTasks.length > 0
+          ? Math.max(...listTasks.map((t) => t.order))
+          : -1;
+
+      const updates = {
+        listId: newListId,
+        order: maxOrder + 1,
+        updatedAt: Date.now(),
+      };
+
+      set({
+        tasks: tasks.map((task) =>
+          task.id === taskId ? { ...task, ...updates } : task,
+        ),
+      });
+      await todoService.updateTaskFields(taskId, updates);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error moving task to list:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingTask", false);
+    }
   },
 
   // Bulk actions
   clearCompleted: async (listId) => {
-    const { tasks } = get();
-    const newTasks = tasks.filter(
-      (task) => task.listId !== listId || !task.isCompleted,
-    );
-    set({ tasks: newTasks });
-    await todoService.saveTasks(newTasks);
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
+
+    setLoading("isClearingCompleted", true);
+
+    try {
+      const completedIds = tasks
+        .filter((task) => task.listId === listId && task.isCompleted)
+        .map((task) => task.id);
+
+      set({
+        tasks: tasks.filter(
+          (task) => task.listId !== listId || !task.isCompleted,
+        ),
+      });
+
+      if (completedIds.length > 0) {
+        await todoService.deleteTasks(completedIds);
+      }
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error clearing completed tasks:", error);
+      throw error;
+    } finally {
+      setLoading("isClearingCompleted", false);
+    }
   },
 
   // Selectors
@@ -402,27 +627,41 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   addTag: async (title, color) => {
-    const now = Date.now();
     const { tags } = get();
+    const previousTags = tags;
 
-    const newTag: Tag = {
-      id: generateId(),
-      title,
-      color,
-      createdAt: now,
-      updatedAt: now,
-    };
+    try {
+      const now = Date.now();
 
-    const newTags = [...tags, newTag];
-    set({ tags: newTags });
-    await todoService.saveTags(newTags);
-    return newTag.id;
+      const newTag: Tag = {
+        id: generateId(),
+        title,
+        color,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      set({ tags: [...tags, newTag] });
+      await todoService.saveTag(newTag);
+      return newTag.id;
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error adding tag:", error);
+      throw error;
+    }
   },
 
   deleteTag: async (id) => {
     const { tags } = get();
-    const newTags = tags.filter((tag) => tag.id !== id);
-    set({ tags: newTags });
-    await todoService.saveTags(tags);
+    const previousTags = tags;
+
+    try {
+      set({ tags: tags.filter((tag) => tag.id !== id) });
+      await todoService.deleteTagById(id);
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error deleting tag:", error);
+      throw error;
+    }
   },
 }));

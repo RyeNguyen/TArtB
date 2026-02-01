@@ -5,6 +5,9 @@ import {
   writeBatch,
   onSnapshot,
   Unsubscribe,
+  setDoc,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db, auth } from "@services/firebase/config";
 import { Tag, Task, TaskList, TodoData } from "@/types/toDo";
@@ -15,11 +18,34 @@ import { removeUndefined } from "@utils/objectUtils";
 // ============================================================================
 
 export interface TodoService {
+  // Bulk operations (keep for migration, initial load)
   load(): Promise<TodoData>;
   saveLists(lists: TaskList[]): Promise<void>;
   saveTasks(tasks: Task[]): Promise<void>;
   saveTags(tags: Tag[]): Promise<void>;
   clear(): Promise<void>;
+
+  // Granular List operations
+  saveList(list: TaskList): Promise<void>;
+  deleteListById(id: string): Promise<void>;
+
+  // Granular Task operations
+  saveTask(task: Task): Promise<void>;
+  updateTaskFields(
+    id: string,
+    updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
+  ): Promise<void>;
+  deleteTaskById(id: string): Promise<void>;
+
+  // Granular Tag operations
+  saveTag(tag: Tag): Promise<void>;
+  deleteTagById(id: string): Promise<void>;
+
+  // Bulk operations for specific scenarios
+  deleteTasks(ids: string[]): Promise<void>;
+  updateTasksOrders(
+    updates: Array<{ id: string; order: number; updatedAt: number }>,
+  ): Promise<void>;
 }
 
 const STORAGE_KEY = "tartb-todo";
@@ -40,6 +66,8 @@ const getStorage = () => {
 };
 
 class LocalTodoService implements TodoService {
+  private cache: TodoData | null = null;
+
   private ensureValidData(data: any): TodoData {
     return {
       lists: Array.isArray(data?.lists) ? data.lists : [],
@@ -56,10 +84,12 @@ class LocalTodoService implements TodoService {
         console.log("[LocalService] Loading from Chrome storage...");
         const result = await storage.get(STORAGE_KEY);
         const data = this.ensureValidData(result[STORAGE_KEY]);
+        this.cache = data;
         return data;
       } catch (error) {
         console.error("Error loading todo data from Chrome storage:", error);
-        return { lists: [], tasks: [], tags: [] };
+        this.cache = { lists: [], tasks: [], tags: [] };
+        return this.cache;
       }
     }
 
@@ -69,33 +99,138 @@ class LocalTodoService implements TodoService {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       const data = this.ensureValidData(parsed);
+      this.cache = data;
       return data;
     } catch (error) {
       console.error("Error loading todo data from localStorage:", error);
-      return { lists: [], tasks: [], tags: [] };
+      this.cache = { lists: [], tasks: [], tags: [] };
+      return this.cache;
     }
   }
 
   async saveLists(lists: TaskList[]): Promise<void> {
-    const data = await this.load();
-    data.lists = lists;
-    await this.save(data);
+    if (!this.cache) await this.load();
+    this.cache!.lists = lists;
+    await this.save(this.cache!);
   }
 
   async saveTasks(tasks: Task[]): Promise<void> {
-    const data = await this.load();
-    data.tasks = tasks;
-    await this.save(data);
+    if (!this.cache) await this.load();
+    this.cache!.tasks = tasks;
+    await this.save(this.cache!);
   }
 
   async saveTags(tags: Tag[]): Promise<void> {
-    const data = await this.load();
-    data.tags = tags;
-    await this.save(data);
+    if (!this.cache) await this.load();
+    this.cache!.tags = tags;
+    await this.save(this.cache!);
   }
 
   async clear(): Promise<void> {
-    await this.save({ lists: [], tasks: [], tags: [] });
+    this.cache = { lists: [], tasks: [], tags: [] };
+    await this.save(this.cache);
+  }
+
+  // === Granular List operations ===
+  async saveList(list: TaskList): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const listIndex = this.cache!.lists.findIndex((l) => l.id === list.id);
+    if (listIndex >= 0) {
+      this.cache!.lists[listIndex] = list; // Update
+    } else {
+      this.cache!.lists.push(list); // Add
+    }
+
+    await this.save(this.cache!);
+  }
+
+  async deleteListById(id: string): Promise<void> {
+    if (!this.cache) await this.load();
+    this.cache!.lists = this.cache!.lists.filter((l) => l.id !== id);
+    await this.save(this.cache!);
+  }
+
+  // === Granular Task operations ===
+  async saveTask(task: Task): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const taskIndex = this.cache!.tasks.findIndex((t) => t.id === task.id);
+    if (taskIndex >= 0) {
+      this.cache!.tasks[taskIndex] = task; // Update
+    } else {
+      this.cache!.tasks.push(task); // Add
+    }
+
+    await this.save(this.cache!);
+  }
+
+  async updateTaskFields(
+    id: string,
+    updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
+  ): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const taskIndex = this.cache!.tasks.findIndex((t) => t.id === id);
+    if (taskIndex >= 0) {
+      this.cache!.tasks[taskIndex] = {
+        ...this.cache!.tasks[taskIndex],
+        ...updates,
+      };
+      await this.save(this.cache!);
+    }
+  }
+
+  async deleteTaskById(id: string): Promise<void> {
+    if (!this.cache) await this.load();
+    this.cache!.tasks = this.cache!.tasks.filter((t) => t.id !== id);
+    await this.save(this.cache!);
+  }
+
+  // === Granular Tag operations ===
+  async saveTag(tag: Tag): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const tagIndex = this.cache!.tags.findIndex((t) => t.id === tag.id);
+    if (tagIndex >= 0) {
+      this.cache!.tags[tagIndex] = tag; // Update
+    } else {
+      this.cache!.tags.push(tag); // Add
+    }
+
+    await this.save(this.cache!);
+  }
+
+  async deleteTagById(id: string): Promise<void> {
+    if (!this.cache) await this.load();
+    this.cache!.tags = this.cache!.tags.filter((t) => t.id !== id);
+    await this.save(this.cache!);
+  }
+
+  // === Bulk operations ===
+  async deleteTasks(ids: string[]): Promise<void> {
+    if (!this.cache) await this.load();
+    const idSet = new Set(ids);
+    this.cache!.tasks = this.cache!.tasks.filter((t) => !idSet.has(t.id));
+    await this.save(this.cache!);
+  }
+
+  async updateTasksOrders(
+    updates: Array<{ id: string; order: number; updatedAt: number }>,
+  ): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+
+    this.cache!.tasks = this.cache!.tasks.map((task) => {
+      const update = updateMap.get(task.id);
+      if (update) {
+        return { ...task, order: update.order, updatedAt: update.updatedAt };
+      }
+      return task;
+    });
+
+    await this.save(this.cache!);
   }
 
   private async save(data: TodoData): Promise<void> {
@@ -267,6 +402,111 @@ class FirestoreTodoService implements TodoService {
     }
   }
 
+  // === Granular List operations ===
+  async saveList(list: TaskList): Promise<void> {
+    try {
+      const { id, ...data } = list;
+      await setDoc(doc(this.listsRef, id), removeUndefined(data), {
+        merge: true,
+      });
+    } catch (error) {
+      console.error("Error saving list to Firestore:", error);
+      throw error;
+    }
+  }
+
+  async deleteListById(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(this.listsRef, id));
+    } catch (error) {
+      console.error("Error deleting list from Firestore:", error);
+      throw error;
+    }
+  }
+
+  // === Granular Task operations ===
+  async saveTask(task: Task): Promise<void> {
+    try {
+      const { id, ...data } = task;
+      await setDoc(doc(this.tasksRef, id), removeUndefined(data), {
+        merge: true,
+      });
+    } catch (error) {
+      console.error("Error saving task to Firestore:", error);
+      throw error;
+    }
+  }
+
+  async updateTaskFields(
+    id: string,
+    updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
+  ): Promise<void> {
+    try {
+      await updateDoc(doc(this.tasksRef, id), removeUndefined(updates));
+    } catch (error) {
+      console.error("Error updating task fields in Firestore:", error);
+      throw error;
+    }
+  }
+
+  async deleteTaskById(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(this.tasksRef, id));
+    } catch (error) {
+      console.error("Error deleting task from Firestore:", error);
+      throw error;
+    }
+  }
+
+  // === Granular Tag operations ===
+  async saveTag(tag: Tag): Promise<void> {
+    try {
+      const { id, ...data } = tag;
+      await setDoc(doc(this.tagsRef, id), removeUndefined(data), {
+        merge: true,
+      });
+    } catch (error) {
+      console.error("Error saving tag to Firestore:", error);
+      throw error;
+    }
+  }
+
+  async deleteTagById(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(this.tagsRef, id));
+    } catch (error) {
+      console.error("Error deleting tag from Firestore:", error);
+      throw error;
+    }
+  }
+
+  // === Bulk operations ===
+  async deleteTasks(ids: string[]): Promise<void> {
+    try {
+      const batch = writeBatch(db);
+      ids.forEach((id) => batch.delete(doc(this.tasksRef, id)));
+      await batch.commit();
+    } catch (error) {
+      console.error("Error deleting tasks from Firestore:", error);
+      throw error;
+    }
+  }
+
+  async updateTasksOrders(
+    updates: Array<{ id: string; order: number; updatedAt: number }>,
+  ): Promise<void> {
+    try {
+      const batch = writeBatch(db);
+      updates.forEach(({ id, order, updatedAt }) => {
+        batch.update(doc(this.tasksRef, id), { order, updatedAt });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error updating task orders in Firestore:", error);
+      throw error;
+    }
+  }
+
   /**
    * Subscribe to real-time updates
    */
@@ -352,6 +592,51 @@ class HybridTodoService implements TodoService {
 
   async clear(): Promise<void> {
     return this.getService().clear();
+  }
+
+  // === Granular List operations ===
+  async saveList(list: TaskList): Promise<void> {
+    return this.getService().saveList(list);
+  }
+
+  async deleteListById(id: string): Promise<void> {
+    return this.getService().deleteListById(id);
+  }
+
+  // === Granular Task operations ===
+  async saveTask(task: Task): Promise<void> {
+    return this.getService().saveTask(task);
+  }
+
+  async updateTaskFields(
+    id: string,
+    updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
+  ): Promise<void> {
+    return this.getService().updateTaskFields(id, updates);
+  }
+
+  async deleteTaskById(id: string): Promise<void> {
+    return this.getService().deleteTaskById(id);
+  }
+
+  // === Granular Tag operations ===
+  async saveTag(tag: Tag): Promise<void> {
+    return this.getService().saveTag(tag);
+  }
+
+  async deleteTagById(id: string): Promise<void> {
+    return this.getService().deleteTagById(id);
+  }
+
+  // === Bulk operations ===
+  async deleteTasks(ids: string[]): Promise<void> {
+    return this.getService().deleteTasks(ids);
+  }
+
+  async updateTasksOrders(
+    updates: Array<{ id: string; order: number; updatedAt: number }>,
+  ): Promise<void> {
+    return this.getService().updateTasksOrders(updates);
   }
 
   /**

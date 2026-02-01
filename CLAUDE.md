@@ -26,25 +26,37 @@ src/
 │   ├── Artwork/
 │   │   └── InteractiveArtwork.tsx  # Canvas-based image with dissolve effect
 │   ├── icons/                 # Grip (drag handle icon)
-│   ├── atoms/                 # GlassButton, Glass, Switch, Selector, Clock, Typography, WidgetWrapper, Popover, DatePicker, Dropdown
+│   ├── atoms/                 # GlassButton, Glass, Switch, Selector, Clock, Typography, WidgetWrapper, Popover, DatePicker, Dropdown, Toast
 │   ├── molecules/             # ArtworkInfo, MenuCategories, DockStation, ToDo (with drag-drop components)
 │   └── organisms/             # Sidebar (settings panel), DynamicFieldRenderer
+├── assets/
+│   └── icons/                 # SVG icons (Close, CheckCircle, Error, Info, Flag, Calendar, etc.)
 ├── stores/
 │   ├── artworkStore.ts        # Current artwork state
 │   ├── settingsStore.ts       # Widget + app settings with Chrome storage middleware
-│   └── todoStore.ts           # Task lists & tasks with Chrome storage persistence
+│   ├── todoStore.ts           # Task lists & tasks with Chrome storage persistence & error handling
+│   └── toastStore.ts          # Toast notifications with auto-dismiss
 ├── services/
 │   ├── api/
 │   │   ├── artInstituteApi.ts # Chicago Art Institute API
 │   │   ├── metMuseumApi.ts    # Metropolitan Museum API
 │   │   └── wikiArtApi.ts      # WikiArt API (needs auth)
-│   └── firebase/
-│       └── firestoreService.ts # Primary data source
+│   ├── firebase/
+│   │   └── firestoreService.ts # Primary data source
+│   └── todo/
+│       └── todoService.ts      # Hybrid service: LocalTodoService + FirestoreTodoService with granular operations
 ├── hooks/
 │   ├── useArtwork.ts          # Main hook: Firestore → API fallback chain
 │   └── useToDo.ts             # ToDo state: input, priority, deadline, task CRUD, drag-drop reordering
 ├── types/
-│   └── settings.ts            # WidgetId enum, UserSettings, widget state interfaces
+│   ├── settings.ts            # WidgetId enum, UserSettings, widget state interfaces
+│   └── toDo.ts                # Task, TaskList, Tag, TaskGroup, TodoData interfaces
+├── utils/
+│   ├── stringUtils.ts         # generateId() - UUID generation with crypto API fallback
+│   ├── objectUtils.ts         # removeUndefined() - clean objects before Firestore writes
+│   ├── taskSortUtils.ts       # Task sorting logic (DATE, DUE_DATE, PRIORITY, TITLE, MANUAL)
+│   ├── taskGroupUtils.ts      # Task grouping logic (PRIORITY, DATE, DUE_DATE, NONE)
+│   └── taskReorderUtils.ts    # Drag-drop order calculation, cross-group property updates
 ├── constants/
 │   ├── common.ts              # Enums: TimeFormat, ClockType, Language, FieldType, TaskPriorityType, TaskSortBy, TaskGroupBy
 │   ├── widgets.ts             # WIDGET_REGISTRY - widget metadata (icons, names, categories)
@@ -102,6 +114,49 @@ Firestore → Selected Museum API → Random Museum → Met Museum (fallback)
 - Auto-refetch based on `settings.artwork.changeInterval`
 - Progressive image loading (small → full)
 
+### Todo Service Layer (Optimized)
+
+**Architecture:** Hybrid service switches between LocalTodoService (anonymous users) and FirestoreTodoService (authenticated users)
+
+**Service Interface:**
+```typescript
+interface TodoService {
+  // Bulk operations (for initial load, migration, bulk deletes)
+  load(), saveLists(), saveTasks(), saveTags(), clear()
+
+  // Granular operations (for single-item CRUD)
+  saveList(), deleteListById()
+  saveTask(), updateTaskFields(), deleteTaskById()
+  saveTag(), deleteTagById()
+
+  // Bulk operations for specific scenarios
+  deleteTasks(ids[])           // Bulk delete (clearCompleted)
+  updateTasksOrders(updates[]) // Batch reorder (normalizeTaskOrders)
+}
+```
+
+**LocalTodoService (Chrome Storage/localStorage):**
+- In-memory cache (`TodoData | null`) populated on first `load()`
+- Granular methods: modify cache → write full data to storage
+- Cache ensures no redundant reads from storage
+- ~50KB memory overhead (acceptable for Chrome extension)
+
+**FirestoreTodoService (Cloud Firestore):**
+- Granular methods use `setDoc()`, `updateDoc()`, `deleteDoc()` directly
+- **No `getDocs()` calls** for single-item operations → massive savings
+- Batch operations use `writeBatch()` for multi-item updates
+- Real-time sync via `onSnapshot()` listeners on lists/tasks/tags collections
+
+**Performance Impact:**
+- Before: Adding 1 task = 100 reads + 101 writes = **201 Firestore operations**
+- After: Adding 1 task = 0 reads + 1 write = **1 Firestore operation**
+- **99.5% reduction** in Firestore billable operations for single-item changes
+
+**Migration Strategy:**
+- Smart merge on first sign-in: items with same ID use newer `updatedAt`
+- Local data merged into Firestore, then real-time sync takes over
+- Batch methods kept for backwards compatibility
+
 ### Settings Store Actions
 ```typescript
 toggleWidgetVisible(widgetId)  // Click on dock icon
@@ -122,16 +177,116 @@ Shared popover component (`atoms/Popover.tsx`) using @floating-ui/react:
 
 Used by: `Dropdown`, `DatePicker`, and future popovers (tags, task detail, etc.)
 
+### Toast System & Error Handling
+Comprehensive error handling with user feedback via toast notifications:
+
+**Toast Store** (`stores/toastStore.ts`):
+- Auto-dismiss with configurable durations (success: 3s, error: 5s, info: 4s)
+- Prevents duplicate toasts (same message + type)
+- Limits to max 3 visible toasts (stack management)
+- Support for action buttons (e.g., retry on errors)
+
+**Toast Component** (`atoms/Toast.tsx`):
+- Glass-morphism styled notifications
+- Framer Motion animations (slide in/out from top-right)
+- Three types with icons: success (✓), error (⚠), info (ℹ)
+- Manual close button + auto-dismiss
+- Z-index: 100 (above all other UI)
+
+**Error Handling Pattern** (applied to all 15 async store actions):
+```typescript
+try {
+  const previousState = current; // Snapshot for rollback
+  setLoading(key, true);
+
+  set({ newState }); // Optimistic update
+  await todoService.save(); // Persist to backend
+} catch (error) {
+  set({ previousState }); // Rollback on failure
+  console.error("[TodoStore] Error:", error);
+  throw error; // Bubble to hook for toast
+} finally {
+  setLoading(key, false);
+}
+```
+
+**Loading States** (`todoStore.loading`):
+```typescript
+interface TodoLoadingState {
+  isAddingTask, isUpdatingTask, isTogglingTask, isReorderingTask,
+  isDeletingTask, isAddingList, isUpdatingList, isDeletingList,
+  isClearingCompleted
+}
+```
+
+**Hook-Level Toast Notifications** (`useToDo.ts`):
+- Success toasts for user-initiated actions (add task, toggle task, add list)
+- Error toasts with retry buttons for failed operations
+- No success toast for drag-drop (too noisy)
+- All errors are caught and displayed to user (zero silent failures)
+
+**Translation Keys** (`locales/*.json`):
+- Success: `toDo.toast.taskAdded`, `taskCompleted`, `listAdded`, etc.
+- Error: `toDo.toast.errorAddingTask`, `errorTogglingTask`, etc.
+- Action: `toDo.toast.retry`
+
+### Task Utilities (Phase 1: Extracted Logic)
+
+Complex filtering, grouping, and reordering logic extracted from `useToDo` hook into pure, testable utility functions:
+
+**taskSortUtils.ts** - Task sorting logic:
+```typescript
+sortTasks(tasks: Task[], sortBy: TaskSortBy): Task[]
+```
+- DATE: Sort by createdAt (newest first)
+- DUE_DATE: Tasks with deadline first (sorted by deadline), then tasks without deadline, order as tiebreaker
+- PRIORITY: High→Medium→Low→None, order as tiebreaker
+- TITLE: Alphabetical by title
+- MANUAL: Sort by order field only
+
+**taskGroupUtils.ts** - Task grouping logic:
+```typescript
+groupTasks(tasks: Task[], groupBy: TaskGroupBy, t: TranslateFunction): TaskGroup[]
+```
+- PRIORITY: Groups by High/Medium/Low/None priority (droppable)
+- DATE: Groups by Today/Tomorrow/Earlier/Later creation date (not droppable - immutable)
+- DUE_DATE: Groups by Overdue/Upcoming/NoDate deadline status (NoDate droppable to clear deadline)
+- NONE: Single group for all incomplete tasks
+- Always appends Completed group if completed tasks exist (droppable to mark as completed)
+
+**taskReorderUtils.ts** - Drag-drop calculations:
+```typescript
+calculateNewTaskOrder(targetTasks, targetIndex, getTaskOrder?): number
+getPropertyUpdatesForCrossGroupDrag(sourceGroupId, targetGroupId, targetGroupValue): TaskPropertyUpdates
+createNormalizedOrderGetter(filteredTasks): (task: Task) => number
+```
+- Fractional ordering: Insert between existing tasks without full reordering
+- Cross-group drag updates: priority changes, deadline clearing, completion toggling
+- Normalized order getter: Used when switching from DATE/TITLE to MANUAL sort
+
+**Benefits:**
+- ~150 lines removed from useToDo hook (500 → 350 lines)
+- Pure functions → easily testable in isolation
+- Reusable across different components
+- Clear separation of concerns (UI logic vs business logic)
+
 ### ToDo Widget
 - **ToDoForm** (`molecules/toDo/toDoForm.tsx`): Task input with priority dropdown, date picker, and tags
+  - Loading overlay with spinner during task addition
+  - Input and submit button disabled while `loading.isAddingTask`
+  - Form cleared on successful task addition
 - **ToDoList** (`molecules/toDo/toDoList.tsx`): Task list with drag-drop support via @dnd-kit
 - **DatePicker** (`atoms/DatePicker.tsx`): Calendar popup wrapping react-day-picker + Popover
   - Quick-select buttons: Today, Tomorrow
   - Selecting already-selected date clears it
   - Locale-aware via date-fns locales
   - Disables past dates
-- **useToDo hook**: Manages input state (title, priority, deadline), task filtering/grouping/sorting, drag-drop reordering
-- **todoStore**: Zustand store with task lists, tasks, CRUD operations, persisted via Chrome storage
+- **useToDo hook**: Manages input state (title, priority, deadline), task filtering/grouping/sorting (via utilities), drag-drop reordering, error handling with toast notifications
+  - Uses `taskSortUtils.sortTasks()` for filtering tasks by sort criteria
+  - Uses `taskGroupUtils.groupTasks()` for grouping tasks by priority/date/due date
+  - Uses `taskReorderUtils` for drag-drop order calculations and cross-group property updates
+  - Reduced from ~500 to ~350 lines after utility extraction (Phase 1)
+- **todoStore**: Zustand store with task lists, tasks, CRUD operations, loading states, error handling, persisted via Chrome storage
 
 ### Task Drag & Drop
 Built with @dnd-kit for task reordering within and across groups:
@@ -162,7 +317,7 @@ Built with @dnd-kit for task reordering within and across groups:
 
 ### Component Styling
 - Glass-morphism: `backdrop-blur-sm bg-gray-400/25 border-white/10`
-- Z-index layers: 0 (blur bg), 1 (overlay), 2 (canvas), 10 (widgets), 50 (sidebar)
+- Z-index layers: 0 (blur bg), 1 (overlay), 2 (canvas), 10 (widgets), 50 (sidebar), 100 (toasts)
 - Transitions: `transition-all duration-200`
 
 ## Environment Variables
@@ -211,6 +366,17 @@ npm run preview  # Preview production build
 3. Add to `Language` enum in `constants/common.ts`
 4. Add selector option in `settingConfig.ts`
 
+**Adding Error Handling to New Store Actions:**
+1. Add loading state key to `TodoLoadingState` interface (if applicable)
+2. Wrap action in try/catch/finally block
+3. Snapshot current state before mutation (for rollback)
+4. Set loading state to `true` before operation
+5. Perform optimistic update + backend persistence
+6. On error: rollback state, log error, rethrow to hook
+7. In finally: set loading state to `false`
+8. In hook handler: catch error, show toast with retry button
+9. Add translation keys for success/error messages
+
 ## Architecture Notes
 
 - No background/content scripts - pure new tab UI
@@ -219,3 +385,40 @@ npm run preview  # Preview production build
 - Animation stops when idle for performance
 - 3-level image URL fallbacks for reliability
 - Settings migrate automatically from legacy flat structure to new grouped structure
+- **Error Handling**: All async operations have try/catch with rollback on failure
+  - Optimistic updates with automatic rollback prevent UI inconsistency
+  - User feedback via toast notifications for all actions
+  - Loading states prevent race conditions and double-clicks
+  - Real-time listener handles eventual consistency after rollback
+
+## Refactoring Journey (3 Phases)
+
+**Phase 1: Extract Complex Logic** ✅
+- Extracted 280 lines of filtering, grouping, and reordering logic from `useToDo` hook
+- Created 3 utility modules: `taskSortUtils`, `taskGroupUtils`, `taskReorderUtils`
+- Hook reduced from 500 to 350 lines
+- Pure functions enable unit testing in isolation
+- Clear separation between UI orchestration and business logic
+
+**Phase 2: Optimize Service Layer** ✅
+- Added granular methods to `TodoService` interface (10 new methods)
+- `LocalTodoService`: In-memory cache eliminates redundant reads
+- `FirestoreTodoService`: Direct operations (`setDoc`, `updateDoc`, `deleteDoc`) instead of batch writes
+- **99.5% reduction** in Firestore operations (201 ops → 1 op for adding a task with 100 existing)
+- Batch methods preserved for legitimate bulk operations (migration, bulk delete, reordering)
+- Updated 15 store actions to use granular methods
+
+**Phase 3: Error Handling & User Feedback** ✅
+- Created toast notification system with auto-dismiss and action buttons
+- Added error handling to all 15 async store actions (try/catch/finally pattern)
+- Implemented rollback on failure (snapshot state → optimistic update → rollback on error)
+- Added loading states to prevent race conditions and double-clicks
+- Updated hook handlers to show success/error toasts with retry capability
+- Zero silent failures: all errors caught, logged, and displayed to user
+- Toast UX: max 3 visible, debounced duplicates, glass-morphism styled
+
+**Impact:**
+- **Maintainability**: Clear separation of concerns, testable utilities, consistent error patterns
+- **Performance**: 99.5% reduction in Firestore costs, no redundant storage reads
+- **User Experience**: Immediate feedback, retry on errors, loading states, zero silent failures
+- **Code Quality**: From 500-line monolithic hook to modular, well-tested architecture

@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { DockStation } from "@molecules/DockStation";
 import { ToDo } from "@organisms/ToDo";
 import { UserProfile } from "@atoms/UserProfile";
+import { ToastContainer } from "@atoms/Toast";
 
 function App() {
   const { i18n } = useTranslation();
@@ -107,6 +108,8 @@ function App() {
         onClose={handleCloseSettings}
         initialCategory={initialSettingsCategory}
       />
+
+      <ToastContainer />
     </div>
   );
 }

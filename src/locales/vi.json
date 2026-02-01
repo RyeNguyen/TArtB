@@ -85,6 +85,26 @@
       "addTitle": "Thêm tiêu đề...",
       "addDescription": "Thêm mô tả...",
       "delete": "Xóa công việc"
+    },
+    "toast": {
+      "taskAdded": "Đã thêm công việc",
+      "taskUpdated": "Đã cập nhật công việc",
+      "taskDeleted": "Đã xóa công việc",
+      "taskCompleted": "Đã hoàn thành công việc",
+      "taskUncompleted": "Đã đánh dấu chưa hoàn thành",
+      "listAdded": "Đã tạo danh sách",
+      "listUpdated": "Đã cập nhật danh sách",
+      "listDeleted": "Đã xóa danh sách",
+      "completedCleared": "Đã xóa các công việc đã hoàn thành",
+      "errorAddingTask": "Không thể thêm công việc",
+      "errorUpdatingTask": "Không thể cập nhật công việc",
+      "errorDeletingTask": "Không thể xóa công việc",
+      "errorTogglingTask": "Không thể chuyển trạng thái công việc",
+      "errorAddingList": "Không thể tạo danh sách",
+      "errorUpdatingList": "Không thể cập nhật danh sách",
+      "errorDeletingList": "Không thể xóa danh sách",
+      "errorClearingCompleted": "Không thể xóa các công việc đã hoàn thành",
+      "retry": "Thử lại"
     }
   },
   "auth": {

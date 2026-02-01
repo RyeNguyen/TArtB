@@ -100,6 +100,26 @@
       "addTitle": "Add title...",
       "addDescription": "Add description...",
       "delete": "Delete task"
+    },
+    "toast": {
+      "taskAdded": "Task added",
+      "taskUpdated": "Task updated",
+      "taskDeleted": "Task deleted",
+      "taskCompleted": "Task completed",
+      "taskUncompleted": "Task marked as incomplete",
+      "listAdded": "List created",
+      "listUpdated": "List updated",
+      "listDeleted": "List deleted",
+      "completedCleared": "Completed tasks cleared",
+      "errorAddingTask": "Failed to add task",
+      "errorUpdatingTask": "Failed to update task",
+      "errorDeletingTask": "Failed to delete task",
+      "errorTogglingTask": "Failed to toggle task",
+      "errorAddingList": "Failed to create list",
+      "errorUpdatingList": "Failed to update list",
+      "errorDeletingList": "Failed to delete list",
+      "errorClearingCompleted": "Failed to clear completed tasks",
+      "retry": "Retry"
     }
   },
   "auth": {

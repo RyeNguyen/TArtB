@@ -1,4 +1,5 @@
 import { TaskPriorityType } from "@constants/common";
+import { ParseKeys } from "i18next";
 
 export interface TaskList {
   id: string;
@@ -37,3 +38,19 @@ export interface TodoData {
   tasks: Task[];
   tags: Tag[];
 }
+
+export interface TaskGroup {
+  id: string;
+  label: string;
+  tasks: Task[];
+  groupValue: string;
+  isDroppable: boolean;
+}
+
+export interface TaskPropertyUpdates {
+  priority?: TaskPriorityType;
+  deadline?: number | undefined;
+  isCompleted?: boolean;
+}
+
+export type TranslateFunction = (key: ParseKeys) => string;
