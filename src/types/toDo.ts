@@ -29,6 +29,7 @@ export interface Tag {
   title: string;
   color?: string;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface TodoData {

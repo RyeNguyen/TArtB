@@ -9,6 +9,7 @@ interface DropdownProps {
   value?: string;
   header?: ReactNode;
   onChange?: (value: string) => void;
+  onOpenChange?: () => void;
   className?: string;
   triggerClassName?: string;
   menuClassName?: string;
@@ -21,6 +22,7 @@ export const Dropdown = ({
   value,
   header,
   onChange,
+  onOpenChange,
   className = "",
   triggerClassName = "",
   menuClassName = "",
@@ -33,8 +35,13 @@ export const Dropdown = ({
     setIsOpen(false);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange && onOpenChange();
+  }
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <div className={`relative inline-flex ${className}`}>
         <PopoverTrigger className={triggerClassName}>{children}</PopoverTrigger>
 

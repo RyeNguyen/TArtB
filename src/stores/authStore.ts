@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { User } from 'firebase/auth';
-import { authService } from '@services/firebase/authService';
-import { useTodoStore } from './todoStore';
+import { create } from "zustand";
+import { User } from "firebase/auth";
+import { authService } from "@services/firebase/authService";
+import { useTodoStore } from "./todoStore";
 
 interface AuthState {
   user: User | null;
@@ -26,7 +26,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isInitialized: false,
   error: null,
 
-  // Initialize auth listener (call once on app start)
   initialize: () => {
     set({ isLoading: true });
     let previousUser: User | null = null;
@@ -58,7 +57,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     return unsubscribe;
   },
 
-  // Sign in with Google
   signInWithGoogle: async () => {
     set({ isLoading: true, error: null });
 
@@ -66,13 +64,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       await authService.signInWithGoogle();
       // User state will be updated by onAuthStateChanged listener
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign in failed';
+      const message = error instanceof Error ? error.message : "Sign in failed";
       set({ error: message, isLoading: false });
       throw error;
     }
   },
 
-  // Sign out
   signOut: async () => {
     set({ isLoading: true, error: null });
 
@@ -80,19 +77,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
       await authService.signOut();
       // User state will be updated by onAuthStateChanged listener
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign out failed';
+      const message =
+        error instanceof Error ? error.message : "Sign out failed";
       set({ error: message, isLoading: false });
       throw error;
     }
   },
 
-  // Clear error
   clearError: () => {
     set({ error: null });
   },
 }));
 
-// Selector hooks for common use cases
 export const useUser = () => useAuthStore((state) => state.user);
 export const useIsAuthenticated = () => useAuthStore((state) => !!state.user);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);

@@ -23,7 +23,6 @@ function App() {
     string | undefined
   >();
 
-  // Initialize auth listener on app start
   useEffect(() => {
     const unsubscribe = initializeAuth();
     return () => unsubscribe();

@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@services/firebase/config";
 import { Tag, Task, TaskList, TodoData } from "@/types/toDo";
+import { removeUndefined } from "@utils/objectUtils";
 
 // ============================================================================
 // Interface
@@ -55,11 +56,6 @@ class LocalTodoService implements TodoService {
         console.log("[LocalService] Loading from Chrome storage...");
         const result = await storage.get(STORAGE_KEY);
         const data = this.ensureValidData(result[STORAGE_KEY]);
-        console.log("[LocalService] Chrome storage data:", {
-          lists: data.lists.length,
-          tasks: data.tasks.length,
-          tags: data.tags.length,
-        });
         return data;
       } catch (error) {
         console.error("Error loading todo data from Chrome storage:", error);
@@ -73,11 +69,6 @@ class LocalTodoService implements TodoService {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       const data = this.ensureValidData(parsed);
-      console.log("[LocalService] localStorage data:", {
-        lists: data.lists.length,
-        tasks: data.tasks.length,
-        tags: data.tags.length,
-      });
       return data;
     } catch (error) {
       console.error("Error loading todo data from localStorage:", error);
@@ -132,17 +123,6 @@ class LocalTodoService implements TodoService {
 // Firestore Service (for authenticated users)
 // ============================================================================
 
-// Helper to remove undefined values (Firestore doesn't accept undefined)
-const removeUndefined = <T extends Record<string, any>>(obj: T): T => {
-  const cleaned = { ...obj };
-  Object.keys(cleaned).forEach((key) => {
-    if (cleaned[key] === undefined) {
-      delete cleaned[key];
-    }
-  });
-  return cleaned;
-};
-
 class FirestoreTodoService implements TodoService {
   private userId: string;
   private unsubscribers: Unsubscribe[] = [];
@@ -172,13 +152,13 @@ class FirestoreTodoService implements TodoService {
       ]);
 
       const lists: TaskList[] = listsSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as TaskList)
+        (doc) => ({ id: doc.id, ...doc.data() } as TaskList),
       );
       const tasks: Task[] = tasksSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Task)
+        (doc) => ({ id: doc.id, ...doc.data() } as Task),
       );
       const tags: Tag[] = tagsSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Tag)
+        (doc) => ({ id: doc.id, ...doc.data() } as Tag),
       );
 
       return { lists, tasks, tags };
@@ -297,21 +277,21 @@ class FirestoreTodoService implements TodoService {
 
     const unsubLists = onSnapshot(this.listsRef, (snapshot) => {
       data.lists = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as TaskList)
+        (doc) => ({ id: doc.id, ...doc.data() } as TaskList),
       );
       updateCallback();
     });
 
     const unsubTasks = onSnapshot(this.tasksRef, (snapshot) => {
       data.tasks = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Task)
+        (doc) => ({ id: doc.id, ...doc.data() } as Task),
       );
       updateCallback();
     });
 
     const unsubTags = onSnapshot(this.tagsRef, (snapshot) => {
       data.tags = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Tag)
+        (doc) => ({ id: doc.id, ...doc.data() } as Tag),
       );
       updateCallback();
     });
@@ -342,14 +322,15 @@ class HybridTodoService implements TodoService {
   private getService(): TodoService {
     const user = auth.currentUser;
     if (user) {
-      if (!this.firestoreService || this.firestoreService["userId"] !== user.uid) {
+      if (
+        !this.firestoreService ||
+        this.firestoreService["userId"] !== user.uid
+      ) {
         this.firestoreService?.cleanup();
         this.firestoreService = new FirestoreTodoService(user.uid);
-        console.log("[TodoService] Using Firestore service for user:", user.uid);
       }
       return this.firestoreService;
     }
-    console.log("[TodoService] Using local service (no user)");
     return this.localService;
   }
 
@@ -382,11 +363,12 @@ class HybridTodoService implements TodoService {
   async migrateToFirestore(): Promise<void> {
     const user = auth.currentUser;
     if (!user || this.hasMigrated) {
-      console.log("[Migration] Skipped:", { hasUser: !!user, hasMigrated: this.hasMigrated });
+      console.log("[Migration] Skipped:", {
+        hasUser: !!user,
+        hasMigrated: this.hasMigrated,
+      });
       return;
     }
-
-    console.log("[Migration] Starting migration to Firestore...");
 
     try {
       const rawLocalData = await this.localService.load();
@@ -396,13 +378,7 @@ class HybridTodoService implements TodoService {
         tasks: rawLocalData?.tasks || [],
         tags: rawLocalData?.tags || [],
       };
-      console.log("[Migration] Local data:", {
-        lists: localData.lists.length,
-        tasks: localData.tasks.length,
-        tags: localData.tags.length,
-      });
 
-      // Skip if no local data
       if (
         localData.lists.length === 0 &&
         localData.tasks.length === 0 &&
@@ -419,7 +395,7 @@ class HybridTodoService implements TodoService {
       // Smart merge function
       const smartMerge = <T extends { id: string; updatedAt: number }>(
         local: T[],
-        cloud: T[]
+        cloud: T[],
       ): T[] => {
         const merged = new Map<string, T>();
 
@@ -440,10 +416,7 @@ class HybridTodoService implements TodoService {
       // Merge each collection
       const mergedLists = smartMerge(localData.lists, cloudData.lists);
       const mergedTasks = smartMerge(localData.tasks, cloudData.tasks);
-      const mergedTags = smartMerge(
-        localData.tags.map((t) => ({ ...t, updatedAt: t.createdAt })),
-        cloudData.tags.map((t) => ({ ...t, updatedAt: t.createdAt }))
-      ).map(({ updatedAt, ...tag }) => tag) as Tag[];
+      const mergedTags = smartMerge(localData.tags, cloudData.tags);
 
       // Save merged data to Firestore
       await Promise.all([
@@ -453,11 +426,6 @@ class HybridTodoService implements TodoService {
       ]);
 
       this.hasMigrated = true;
-      console.log("Migration complete!", {
-        lists: mergedLists.length,
-        tasks: mergedTasks.length,
-        tags: mergedTags.length,
-      });
     } catch (error) {
       console.error("Migration failed:", error);
       throw error;

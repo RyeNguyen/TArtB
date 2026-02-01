@@ -159,8 +159,8 @@ class Cell {
     this.slideY = 0;
     this.vx = 0;
     this.vy = 0;
-    this.ease = 0.5;
-    this.friction = 0.9;
+    this.ease = 0.3;
+    this.friction = 0.7;
     this.col = col;
     this.row = row;
     this.movement = 0;
@@ -193,8 +193,8 @@ class Cell {
       const angle = Math.atan2(dy, dx);
       const force =
         (this.effect.mouse.radius - distance) / this.effect.mouse.radius;
-      this.vx += force * Math.cos(angle) * 10;
-      this.vy += force * Math.sin(angle) * 10;
+      this.vx += force * Math.cos(angle) * 8;
+      this.vy += force * Math.sin(angle) * 8;
     }
     this.slideX += (this.vx *= this.friction) - this.slideX * this.ease;
     this.slideY += (this.vy *= this.friction) - this.slideY * this.ease;
@@ -242,7 +242,7 @@ class Effect {
     this.ctx = canvas.getContext('2d');
 
     // Reduced grid size for better performance (40x40 = 1,600 cells vs 100x100 = 10,000)
-    this.gridSize = 60;
+    this.gridSize = 40;
 
     // Initialize contain mode properties
     this.imageX = 0;

@@ -21,37 +21,50 @@ interface TodoStore {
 
   // List actions
   addList: (title: string, color?: string) => Promise<string>;
-  updateList: (id: string, updates: Partial<Omit<TaskList, "id" | "createdAt">>) => Promise<void>;
+  updateList: (
+    id: string,
+    updates: Partial<Omit<TaskList, "id" | "createdAt">>,
+  ) => Promise<void>;
   deleteList: (id: string) => Promise<void>;
   reorderList: (id: string, newOrder: number) => Promise<void>;
   searchList: (searchTerm: string) => Promise<TaskList[]>;
 
   // Task actions
-  addTask: (listId: string, title: string, options?: {
-    description?: string;
-    priority?: TaskPriorityType;
-    tags?: string[];
-    deadline?: number;
-  }) => Promise<string>;
-  updateTask: (id: string, updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>) => Promise<void>;
+  addTask: (
+    listId: string,
+    title: string,
+    options?: {
+      description?: string;
+      priority?: TaskPriorityType;
+      tags?: string[];
+      deadline?: number;
+    },
+  ) => Promise<string>;
+  updateTask: (
+    id: string,
+    updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
+  ) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   toggleTask: (id: string) => Promise<void>;
   reorderTask: (id: string, newOrder: number) => Promise<void>;
   reorderTaskInGroup: (
     id: string,
     newOrder: number,
-    propertyUpdates?: Partial<Pick<Task, "priority" | "deadline" | "tags" | "isCompleted">>
+    propertyUpdates?: Partial<
+      Pick<Task, "priority" | "deadline" | "tags" | "isCompleted">
+    >,
   ) => Promise<void>;
   normalizeTaskOrders: (taskIds: string[]) => Promise<void>;
   moveTaskToList: (taskId: string, newListId: string) => Promise<void>;
 
+  // Tag actions
   addTag: (title: string, color?: string) => Promise<string>;
   deleteTag: (id: string) => Promise<void>;
 
   // Bulk actions
   clearCompleted: (listId: string) => Promise<void>;
 
-  // Selectors (helper methods)
+  // Selectors
   getTasksByList: (listId: string) => Task[];
   getListById: (id: string) => TaskList | undefined;
 }
@@ -69,44 +82,35 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
   loadData: async () => {
     const data = await todoService.load();
-    console.log("[TodoStore] Data loaded:", {
-      lists: data.lists.length,
-      tasks: data.tasks.length,
-      tags: data.tags.length,
-    });
     set({
       lists: data.lists,
       tasks: data.tasks,
       tags: data.tags,
       isLoaded: true,
       // If lists exist, mark as initialized to prevent creating defaults
-      hasInitializedDefaultList: data.lists.length > 0 ? true : get().hasInitializedDefaultList,
+      hasInitializedDefaultList:
+        data.lists.length > 0 ? true : get().hasInitializedDefaultList,
     });
   },
 
   onAuthStateChange: async (isAuthenticated) => {
     const { cleanupRealtimeSync, setupRealtimeSync, loadData } = get();
 
-    console.log("[TodoStore] Auth state changed:", { isAuthenticated });
-
     if (isAuthenticated) {
-      // User just signed in - migrate local data and setup sync
       set({ isSyncing: true });
       try {
-        console.log("[TodoStore] Starting migration to Firestore...");
         await todoService.migrateToFirestore();
-        console.log("[TodoStore] Migration complete, loading data...");
         await loadData(); // Reload merged data from Firestore
-        console.log("[TodoStore] Data loaded, setting up real-time sync...");
         setupRealtimeSync();
-        console.log("[TodoStore] Real-time sync setup complete");
       } catch (error) {
-        console.error("[TodoStore] Error during auth state change (sign in):", error);
+        console.error(
+          "[TodoStore] Error during auth state change (sign in):",
+          error,
+        );
       } finally {
         set({ isSyncing: false });
       }
     } else {
-      // User signed out - cleanup and reload from local
       console.log("[TodoStore] Cleaning up and reloading local data...");
       cleanupRealtimeSync();
       await loadData(); // Reload from local storage
@@ -122,17 +126,12 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
     // Subscribe to real-time updates
     const unsubscribe = todoService.subscribe((data) => {
-      console.log("[TodoStore] Real-time sync update:", {
-        lists: data.lists.length,
-        tasks: data.tasks.length,
-        tags: data.tags.length,
-      });
       set({
         lists: data.lists,
         tasks: data.tasks,
         tags: data.tags,
-        // If we received lists from Firestore, mark as initialized to prevent creating defaults
-        hasInitializedDefaultList: data.lists.length > 0 ? true : get().hasInitializedDefaultList,
+        hasInitializedDefaultList:
+          data.lists.length > 0 ? true : get().hasInitializedDefaultList,
       });
     });
 
@@ -151,7 +150,8 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   addList: async (title, color) => {
     const now = Date.now();
     const { lists } = get();
-    const maxOrder = lists.length > 0 ? Math.max(...lists.map((l) => l.order)) : -1;
+    const maxOrder =
+      lists.length > 0 ? Math.max(...lists.map((l) => l.order)) : -1;
 
     const newList: TaskList = {
       id: generateId(),
@@ -171,9 +171,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   updateList: async (id, updates) => {
     const { lists } = get();
     const newLists = lists.map((list) =>
-      list.id === id
-        ? { ...list, ...updates, updatedAt: Date.now() }
-        : list
+      list.id === id ? { ...list, ...updates, updatedAt: Date.now() } : list,
     );
     set({ lists: newLists });
     await todoService.saveLists(newLists);
@@ -215,15 +213,10 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   searchList: async (searchTerm: string) => {
-    // return await todoService.searchLists(searchTerm);
-
-    // For now, filter locally
     const { lists } = get();
     const term = searchTerm.toLowerCase().trim();
     if (!term) return lists;
-    return lists.filter((item) =>
-      item.title.toLowerCase().includes(term)
-    );
+    return lists.filter((item) => item.title.toLowerCase().includes(term));
   },
 
   // Task actions
@@ -231,7 +224,8 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     const now = Date.now();
     const { tasks } = get();
     const listTasks = tasks.filter((t) => t.listId === listId);
-    const maxOrder = listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
+    const maxOrder =
+      listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
 
     const newTask: Task = {
       id: generateId(),
@@ -256,9 +250,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   updateTask: async (id, updates) => {
     const { tasks } = get();
     const newTasks = tasks.map((task) =>
-      task.id === id
-        ? { ...task, ...updates, updatedAt: Date.now() }
-        : task
+      task.id === id ? { ...task, ...updates, updatedAt: Date.now() } : task,
     );
     set({ tasks: newTasks });
     await todoService.saveTasks(newTasks);
@@ -282,7 +274,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
             completedAt: !task.isCompleted ? now : undefined,
             updatedAt: now,
           }
-        : task
+        : task,
     );
     set({ tasks: newTasks });
     await todoService.saveTasks(newTasks);
@@ -371,12 +363,18 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   moveTaskToList: async (taskId, newListId) => {
     const { tasks } = get();
     const listTasks = tasks.filter((t) => t.listId === newListId);
-    const maxOrder = listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
+    const maxOrder =
+      listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
 
     const newTasks = tasks.map((task) =>
       task.id === taskId
-        ? { ...task, listId: newListId, order: maxOrder + 1, updatedAt: Date.now() }
-        : task
+        ? {
+            ...task,
+            listId: newListId,
+            order: maxOrder + 1,
+            updatedAt: Date.now(),
+          }
+        : task,
     );
     set({ tasks: newTasks });
     await todoService.saveTasks(newTasks);
@@ -386,7 +384,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   clearCompleted: async (listId) => {
     const { tasks } = get();
     const newTasks = tasks.filter(
-      (task) => task.listId !== listId || !task.isCompleted
+      (task) => task.listId !== listId || !task.isCompleted,
     );
     set({ tasks: newTasks });
     await todoService.saveTasks(newTasks);
@@ -394,8 +392,8 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
   // Selectors
   getTasksByList: (listId) => {
-    return get().tasks
-      .filter((task) => task.listId === listId)
+    return get()
+      .tasks.filter((task) => task.listId === listId)
       .sort((a, b) => a.order - b.order);
   },
 
@@ -412,6 +410,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       title,
       color,
       createdAt: now,
+      updatedAt: now,
     };
 
     const newTags = [...tags, newTag];

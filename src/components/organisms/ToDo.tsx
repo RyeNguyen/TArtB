@@ -37,9 +37,9 @@ export const ToDo = () => {
       : [
           {
             label: (
-              <div className="flex items-center gap-1">
+              <div className="w-full flex items-center gap-1">
                 <PlusIcon />
-                <Typography>
+                <Typography className="truncate flex-1">
                   {t("toDo.list.createNew", { listName: searchTerm })}
                 </Typography>
               </div>
@@ -69,10 +69,13 @@ export const ToDo = () => {
         <Dropdown
           value={selectedList?.id}
           onChange={onSelectList}
+          onOpenChange={() => setSearchTerm("")}
+          menuClassName="max-w-80"
           header={
             <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
               <RefreshIcon size={16} />
               <input
+                value={searchTerm}
                 placeholder={t("toDo.list.searchPlaceholder")}
                 className="w-full outline-none text-white font-light text-sz-default"
                 onChange={(e) => setSearchTerm(e.target.value)}

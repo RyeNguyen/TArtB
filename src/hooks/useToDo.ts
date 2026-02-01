@@ -52,7 +52,6 @@ export const useTodo = () => {
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<TaskList[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm);
 
   useEffect(() => {
@@ -65,16 +64,12 @@ export const useTodo = () => {
     const debounceSearch = () => {
       if (!debouncedSearchTerm.trim()) {
         setSearchResults(lists);
-        setIsSearching(false);
         return;
       }
-
-      setIsSearching(true);
 
       searchList(debouncedSearchTerm).then((results) => {
         if (!cancelled) {
           setSearchResults(results);
-          setIsSearching(false);
         }
       });
     };
@@ -104,20 +99,26 @@ export const useTodo = () => {
     // - Not currently syncing (to avoid creating during real-time updates)
     // - Haven't already initialized a default list
     // - No lists exist
-    console.log("[useToDo] Default list check:", {
-      isLoaded,
-      isSyncing,
-      hasInitializedDefaultList,
-      listsLength: lists.length
-    });
-    if (isLoaded && !isSyncing && !hasInitializedDefaultList && lists.length === 0) {
-      console.log("[useToDo] Creating default list...");
+    if (
+      isLoaded &&
+      !isSyncing &&
+      !hasInitializedDefaultList &&
+      lists.length === 0
+    ) {
       useTodoStore.setState({ hasInitializedDefaultList: true });
       addList(t("toDo.myDay")).then((newListId) => {
         handleUpdateSetting("selectedListId", newListId);
       });
     }
-  }, [addList, handleUpdateSetting, isLoaded, isSyncing, hasInitializedDefaultList, lists.length, t]);
+  }, [
+    addList,
+    handleUpdateSetting,
+    isLoaded,
+    isSyncing,
+    hasInitializedDefaultList,
+    lists.length,
+    t,
+  ]);
 
   // Determine if reordering within groups is allowed based on sort criteria
   // MANUAL, PRIORITY, DUE_DATE all support order-based reordering
@@ -336,7 +337,7 @@ export const useTodo = () => {
 
   const handleSelectList = (listId: string) => {
     handleUpdateSetting("selectedListId", listId);
-  }
+  };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -477,7 +478,6 @@ export const useTodo = () => {
     searchTerm,
     setSearchTerm,
     searchResults,
-    isSearching,
 
     // Actions
     searchList,
