@@ -71,3 +71,8 @@ export const getGroupByData = () => [
   { label: i18next.t("toDo.groupBy.tags"), value: TaskGroupBy.TAGS },
   { label: i18next.t("toDo.groupBy.none"), value: TaskGroupBy.NONE },
 ];
+
+export const shortDateFormatMap: Record<string, string> = {
+  vi: "dd MMM",
+  en: "MMM dd",
+};

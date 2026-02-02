@@ -22,11 +22,11 @@ export const Typography = ({
       case TypoVariants.TITLE:
         return "font-bold text-[32px]";
       case TypoVariants.SUBTITLE:
-        return "font-medium text-[20px]";
+        return "font-medium text-sz-large";
       case TypoVariants.DEFAULT:
-        return "font-light text-[18px]";
+        return "font-light text-sz-default";
       case TypoVariants.DESCRIPTION:
-        return "font-light text-[14px]";
+        return "font-light text-sz-small";
       default:
         return "font-light text-[18px]";
     }

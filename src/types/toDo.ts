@@ -45,12 +45,14 @@ export interface TaskGroup {
   tasks: Task[];
   groupValue: string;
   isDroppable: boolean;
+  color?: string;
 }
 
 export interface TaskPropertyUpdates {
   priority?: TaskPriorityType;
   deadline?: number | undefined;
   isCompleted?: boolean;
+  tags?: string[];
 }
 
 export type TranslateFunction = (key: ParseKeys) => string;

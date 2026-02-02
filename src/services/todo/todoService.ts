@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@services/firebase/config";
 import { Tag, Task, TaskList, TodoData } from "@/types/toDo";
-import { removeUndefined } from "@utils/objectUtils";
+import { removeUndefined, undefinedToDeleteField } from "@utils/objectUtils";
 
 // ============================================================================
 // Interface
@@ -442,7 +442,7 @@ class FirestoreTodoService implements TodoService {
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ): Promise<void> {
     try {
-      await updateDoc(doc(this.tasksRef, id), removeUndefined(updates));
+      await updateDoc(doc(this.tasksRef, id), undefinedToDeleteField(updates));
     } catch (error) {
       console.error("Error updating task fields in Firestore:", error);
       throw error;

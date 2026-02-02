@@ -26,12 +26,9 @@ import { vi, enUS } from "date-fns/locale";
 import { SortableTaskItem } from "./SortableTaskItem";
 import { Typography } from "@atoms/Typography";
 import { TypoVariants } from "@constants/common";
+import { shortDateFormatMap } from "@constants/toDoConfig";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
-const shortDateFormatMap: Record<string, string> = {
-  vi: "d MMM",
-  en: "MMM d",
-};
 
 const DroppableGroup = ({
   group,

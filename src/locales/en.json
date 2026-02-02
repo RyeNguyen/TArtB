@@ -66,6 +66,11 @@
       "searchPlaceholder": "Search list...",
       "createNew": "Create new list {{listName}}"
     },
+    "tag": {
+      "searchPlaceholder": "Search tag...",
+      "createNew": "Create new tag {{tagName}}",
+      "none": "None"
+    },
     "sortBy": {
       "title": "Sort by",
       "date": "Created Date",
@@ -87,7 +92,8 @@
       "later": "Later",
       "overdue": "Overdue",
       "upcoming": "Upcoming",
-      "noDate": "No Date"
+      "noDate": "No Date",
+      "noTags": "No Tags"
     },
     "completed": "Completed",
     "deadline": {

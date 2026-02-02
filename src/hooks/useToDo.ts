@@ -5,7 +5,7 @@ import { useTodoStore } from "@stores/todoStore";
 import { useSettingsStore } from "@stores/settingsStore";
 import { useToastStore } from "@stores/toastStore";
 import { WidgetId, TaskSortBy, TaskPriorityType } from "@constants/common";
-import { TaskList } from "@/types/toDo";
+import { Tag, TaskList } from "@/types/toDo";
 import { sortTasks } from "@utils/toDo/taskSortUtils";
 import { groupTasks } from "@utils/toDo/taskGroupUtils";
 import {
@@ -28,12 +28,14 @@ export const useTodo = () => {
     isSyncing,
     hasInitializedDefaultList,
     loading,
+
     loadData,
     searchList,
     addTask,
     addList,
     toggleTask,
     addTag,
+    searchTag,
     getTasksByList,
     reorderTaskInGroup,
     normalizeTaskOrders,
@@ -48,16 +50,42 @@ export const useTodo = () => {
     TaskPriorityType.NONE,
   );
   const [deadline, setDeadline] = useState<number | undefined>(undefined);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
   const [tagSearchTerm, setTagSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<TaskList[]>([]);
+  const [searchTagsResults, setSearchTagsResults] = useState<Tag[]>([]);
   const debouncedSearchTerm = useDebounce(searchTerm);
+  const debouncedTagSearchTerm = useDebounce(tagSearchTerm);
 
   useEffect(() => {
     if (!isLoaded) loadData();
   }, [isLoaded, loadData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const debounceSearch = () => {
+      if (!debouncedTagSearchTerm.trim()) {
+        setSearchTagsResults(tags);
+        return;
+      }
+
+      searchTag(debouncedTagSearchTerm).then((results) => {
+        if (!cancelled) {
+          setSearchTagsResults(results);
+        }
+      });
+    };
+
+    debounceSearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedTagSearchTerm, searchTag, tags]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,13 +167,20 @@ export const useTodo = () => {
   }, [selectedListId, tasks, toDoSettings.sortBy, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
-    return groupTasks(filteredTasks, toDoSettings.groupBy, t);
-  }, [filteredTasks, toDoSettings.groupBy, t]);
+    return groupTasks(filteredTasks, toDoSettings.groupBy, t, { tags });
+  }, [filteredTasks, toDoSettings.groupBy, t, tags]);
 
   // Get all task IDs in order for the flat list (needed for SortableContext)
   const taskIds = useMemo(() => {
     return groupedTasks.flatMap((g) => g.tasks.map((t) => t.id));
   }, [groupedTasks]);
+
+  const getDisplayTags = useCallback(
+    (tagIds: string[]) => {
+      return tags.filter((tag) => tagIds.includes(tag.id));
+    },
+    [tags],
+  );
 
   const handleBlur = (e: React.FocusEvent) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -189,17 +224,20 @@ export const useTodo = () => {
     const taskTitle = inputValue.trim();
     const taskPriority = priority;
     const taskDeadline = deadline;
+    const taskTags = selectedTags;
 
     try {
       await addTask(selectedListId, taskTitle, {
         priority: taskPriority,
         deadline: taskDeadline,
+        tags: taskTags,
       });
 
       // Clear form on success
       setInputValue("");
       setPriority(TaskPriorityType.NONE);
       setDeadline(undefined);
+      setSelectedTags([]);
 
       addToast({
         type: "success",
@@ -216,6 +254,7 @@ export const useTodo = () => {
             addTask(selectedListId, taskTitle, {
               priority: taskPriority,
               deadline: taskDeadline,
+              tags: taskTags,
             }),
         },
       });
@@ -286,11 +325,15 @@ export const useTodo = () => {
           getTaskOrder,
         );
 
+        // Get current task for tag handling
+        const currentTask = tasks.find((t) => t.id === taskId);
+
         // Determine property updates based on cross-group drag
         const propertyUpdates = getPropertyUpdatesForCrossGroupDrag(
           sourceGroupId,
           targetGroupId,
           targetGroup.groupValue,
+          currentTask?.tags,
         );
 
         await reorderTaskInGroup(taskId, newOrder, propertyUpdates);
@@ -312,8 +355,17 @@ export const useTodo = () => {
       normalizeTaskOrders,
       addToast,
       t,
+      tasks,
     ],
   );
+
+  const handleSelectTag = (tagId: string) => {
+    if (selectedTags.includes(tagId)) {
+      setSelectedTags(selectedTags.filter((item) => item !== tagId));
+    } else {
+      setSelectedTags([...selectedTags, tagId]);
+    }
+  };
 
   return {
     // Data
@@ -336,6 +388,8 @@ export const useTodo = () => {
     setPriority,
     deadline,
     setDeadline,
+    selectedTags,
+    handleSelectTag,
 
     // Search State
     searchTerm,
@@ -343,9 +397,12 @@ export const useTodo = () => {
     searchResults,
     tagSearchTerm,
     setTagSearchTerm,
+    searchTagsResults,
 
     // Actions
     addTag,
+    searchTag,
+    getDisplayTags,
     searchList,
     handleUpdateSetting,
     handleAddList,

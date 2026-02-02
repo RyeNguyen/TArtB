@@ -6,8 +6,10 @@ import { Typography } from "@atoms/Typography";
 interface DropdownProps {
   children: ReactNode;
   data: ItemProps[];
-  value?: string;
+  value?: string | string[];
   header?: ReactNode;
+  isCompact?: boolean;
+  multipleSelect?: boolean;
   onChange?: (value: string) => void;
   onOpenChange?: () => void;
   className?: string;
@@ -21,6 +23,8 @@ export const Dropdown = ({
   data = [],
   value,
   header,
+  isCompact = false,
+  multipleSelect = false,
   onChange,
   onOpenChange,
   className = "",
@@ -32,13 +36,15 @@ export const Dropdown = ({
 
   const handleChange = (itemValue: string) => {
     onChange?.(itemValue);
-    setIsOpen(false);
+    if (!multipleSelect) {
+      setIsOpen(false);
+    }
   };
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     onOpenChange && onOpenChange();
-  }
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
@@ -53,15 +59,25 @@ export const Dropdown = ({
           ) : (
             header
           )}
-          {data.map((item) => (
-            <DropdownItem
-              key={item.value}
-              className={menuItemClassName}
-              isActive={item.value === value}
-              onClick={() => handleChange(item.value)}
-              data={item}
-            />
-          ))}
+          <div
+            className={`flex ${isCompact ? "flex-row flex-wrap gap-2" : "flex-col"}`}
+          >
+            {data.map((item) => {
+              const isActive = multipleSelect
+                ? value?.includes(item.value)
+                : value === item.value;
+
+              return (
+                <DropdownItem
+                  key={item.value}
+                  className={menuItemClassName}
+                  isActive={isActive}
+                  onClick={() => handleChange(item.value)}
+                  data={item}
+                />
+              );
+            })}
+          </div>
         </PopoverContent>
       </div>
     </Popover>
@@ -97,15 +113,22 @@ export const DropdownItem = ({
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       className={`
-        w-full p-2 cursor-pointer rounded-xl
+        p-2 cursor-pointer rounded-xl
         transition-colors duration-150
         ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-white/20"}
         ${isActive && "bg-white/40"}
         ${className}
       `}
+      style={{
+        backgroundColor: isActive ? data.color : "transparent",
+      }}
     >
       {typeof data.label === "string" ? (
-        <Typography className="text-white">{data.label}</Typography>
+        <Typography
+          className={`${data.color && isActive ? "text-gray-300!" : "text-text-color"}`}
+        >
+          {data.label}
+        </Typography>
       ) : (
         data.label
       )}

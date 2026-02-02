@@ -2,13 +2,12 @@ import React, { useMemo } from "react";
 import { Task } from "@/types/toDo";
 import { Typography } from "@atoms/Typography";
 import { Popover, PopoverTrigger, PopoverContent } from "@atoms/Popover";
-import { COLORS } from "@constants/colors";
 import { TaskPriorityType } from "@constants/common";
 import { PRIORITY_COLORS } from "@constants/toDoConfig";
-import { isToday, isTomorrow, isPast } from "date-fns";
 import { TaskDetail } from "./TaskDetail";
 import { Checkbox } from "@atoms/Checkbox";
 import { Grip } from "../../icons/Grip";
+import { getDeadlineColor } from "@utils/dateUtils";
 
 interface TaskItemProps {
   task: Task;
@@ -30,19 +29,9 @@ export const TaskItem = ({
   dragHandleProps,
 }: TaskItemProps) => {
   const deadlineDate = useMemo(
-    () => (task.deadline ? new Date(task.deadline) : null),
+    () => (task.deadline ? new Date(task.deadline) : undefined),
     [task.deadline],
   );
-  const deadlineColor = useMemo(() => {
-    if (!deadlineDate) return COLORS.BLUE_50;
-    if (isToday(deadlineDate) || isTomorrow(deadlineDate)) {
-      return COLORS.WARNING_50;
-    } else if (isPast(deadlineDate)) {
-      return COLORS.ERROR_50;
-    } else {
-      return COLORS.BLUE_50;
-    }
-  }, [deadlineDate]);
 
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange}>
@@ -75,7 +64,7 @@ export const TaskItem = ({
         </div>
 
         {task.deadline && (
-          <Typography style={{ color: deadlineColor }}>
+          <Typography style={{ color: getDeadlineColor(deadlineDate) }}>
             {formatDeadline(task.deadline)}
           </Typography>
         )}

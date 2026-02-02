@@ -50,6 +50,11 @@
       "searchPlaceholder": "Tìm danh sách...",
       "createNew": "Tạo mới danh sách {{listName}}"
     },
+    "tag": {
+      "searchPlaceholder": "Tìm kiếm nhãn...",
+      "createNew": "Tạo nhãn mới {{tagName}}",
+      "none": "Không"
+    },
     "inputPlaceholder": "Bạn muốn làm gì?",
     "sortBy": {
       "date": "Ngày tạo",
@@ -73,10 +78,12 @@
       "later": "Sau này",
       "overdue": "Quá hạn",
       "upcoming": "Sắp tới",
-      "noDate": "Không có hạn"
+      "noDate": "Không có hạn",
+      "noTags": "Không có nhãn"
     },
     "completed": "Hoàn thành",
     "deadline": {
+      "clear": "Xoá hạn",
       "today": "Hôm nay",
       "tomorrow": "Ngày mai",
       "noDate": "Hạn chót"

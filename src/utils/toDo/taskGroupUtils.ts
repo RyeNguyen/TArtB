@@ -1,6 +1,10 @@
-import { Task, TaskGroup, TranslateFunction } from "@/types/toDo";
+import { Tag, Task, TaskGroup, TranslateFunction } from "@/types/toDo";
 import { TaskGroupBy, TaskPriorityType } from "@constants/common";
 import { getPriorityConfig } from "@constants/toDoConfig";
+
+export interface GroupTasksOptions {
+  tags?: Tag[];
+}
 
 const DAY_MS = 86400000;
 
@@ -140,6 +144,63 @@ function groupByDueDate(tasks: Task[], t: TranslateFunction): TaskGroup[] {
 }
 
 /**
+ * Group tasks by tags
+ * Tasks with multiple tags appear in multiple groups
+ * Tasks without tags go to "No Tags" group
+ */
+function groupByTags(
+  tasks: Task[],
+  t: TranslateFunction,
+  tags: Tag[],
+): TaskGroup[] {
+  const groups: TaskGroup[] = [];
+  const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
+  const tasksByTag = new Map<string, Task[]>();
+  const noTagTasks: Task[] = [];
+
+  for (const task of tasks) {
+    if (!task.tags || task.tags.length === 0) {
+      noTagTasks.push(task);
+    } else {
+      for (const tagId of task.tags) {
+        if (!tasksByTag.has(tagId)) {
+          tasksByTag.set(tagId, []);
+        }
+        tasksByTag.get(tagId)!.push(task);
+      }
+    }
+  }
+
+  // Add groups for each tag that has tasks
+  for (const [tagId, tagTasks] of tasksByTag) {
+    const tag = tagMap.get(tagId);
+    if (tag && tagTasks.length > 0) {
+      groups.push({
+        id: `tag:${tagId}`,
+        label: `#${tag.title}`,
+        tasks: tagTasks,
+        groupValue: tagId,
+        isDroppable: true, // Can drop to add tag to task
+        color: tag.color,
+      });
+    }
+  }
+
+  // Add "No Tags" group at the end
+  if (noTagTasks.length > 0) {
+    groups.push({
+      id: "tag:none",
+      label: t("toDo.groupBy.noTags"),
+      tasks: noTagTasks,
+      groupValue: "none",
+      isDroppable: true, // Can drop to remove all tags
+    });
+  }
+
+  return groups;
+}
+
+/**
  * Create the completed tasks group
  */
 function createCompletedGroup(tasks: Task[], t: TranslateFunction): TaskGroup {
@@ -155,14 +216,16 @@ function createCompletedGroup(tasks: Task[], t: TranslateFunction): TaskGroup {
 /**
  * Group tasks based on the specified grouping criteria
  * @param tasks - Array of tasks to group (should be sorted before grouping)
- * @param groupBy - Grouping criteria (PRIORITY, DATE, DUE_DATE, NONE)
+ * @param groupBy - Grouping criteria (PRIORITY, DATE, DUE_DATE, TAGS, NONE)
  * @param t - Translation function for labels
+ * @param options - Optional parameters (tags for TAGS grouping)
  * @returns Array of task groups
  */
 export function groupTasks(
   tasks: Task[],
   groupBy: TaskGroupBy,
   t: TranslateFunction,
+  options: GroupTasksOptions = {},
 ): TaskGroup[] {
   if (!tasks.length) return [];
 
@@ -182,6 +245,10 @@ export function groupTasks(
 
     case TaskGroupBy.DUE_DATE:
       groups.push(...groupByDueDate(incomplete, t));
+      break;
+
+    case TaskGroupBy.TAGS:
+      groups.push(...groupByTags(incomplete, t, options.tags || []));
       break;
 
     case TaskGroupBy.NONE:

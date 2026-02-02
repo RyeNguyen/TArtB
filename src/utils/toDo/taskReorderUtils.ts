@@ -44,12 +44,14 @@ export function calculateNewTaskOrder(
  * @param sourceGroupId - ID of the source group
  * @param targetGroupId - ID of the target group
  * @param targetGroupValue - Value of the target group (priority, deadline status, etc.)
- * @returns Object with properties to update (priority, deadline, isCompleted)
+ * @param currentTags - Current tags of the task (needed for tag group handling)
+ * @returns Object with properties to update (priority, deadline, isCompleted, tags)
  */
 export function getPropertyUpdatesForCrossGroupDrag(
   sourceGroupId: string,
   targetGroupId: string,
   targetGroupValue: string,
+  currentTags?: string[],
 ): TaskPropertyUpdates {
   const updates: TaskPropertyUpdates = {};
 
@@ -73,6 +75,18 @@ export function getPropertyUpdatesForCrossGroupDrag(
   // Due date group changes - clear deadline when dropped in "No Date"
   if (targetGroupId === "dueDate:noDate") {
     updates.deadline = undefined;
+  }
+
+  // Tag group changes
+  if (targetGroupId === "tag:none") {
+    // Clear all tags when dropped in "No Tags" group
+    updates.tags = [];
+  } else if (targetGroupId.startsWith("tag:")) {
+    // Add the target tag to existing tags (if not already present)
+    const existingTags = currentTags || [];
+    if (!existingTags.includes(targetGroupValue)) {
+      updates.tags = [...existingTags, targetGroupValue];
+    }
   }
 
   return updates;

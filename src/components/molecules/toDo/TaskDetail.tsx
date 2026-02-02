@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Task } from "@/types/toDo";
 import { Typography } from "@atoms/Typography";
 import { Button } from "@atoms/button/Button";
 import { DatePicker } from "@atoms/DatePicker";
 import { Dropdown } from "@atoms/Dropdown";
 import { COLORS } from "@constants/colors";
-import { TaskPriorityType } from "@constants/common";
-import { getPriorityConfig } from "@constants/toDoConfig";
+import { TaskPriorityType, TypoVariants } from "@constants/common";
+import { getPriorityConfig, shortDateFormatMap } from "@constants/toDoConfig";
 import { useTodoStore } from "@stores/todoStore";
 import CalendarIcon from "@icons/Calendar";
 import FlagIcon from "@icons/Flag";
@@ -15,12 +15,14 @@ import { useTranslation } from "react-i18next";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
 import { Checkbox } from "@atoms/Checkbox";
+import PlusIcon from "@icons/Plus";
+import { useTodo } from "@hooks/useToDo";
+import RefreshIcon from "@icons/Refresh";
+import TagIcon from "@icons/Tag";
+import { getDeadlineColor } from "@utils/dateUtils";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
-const shortDateFormatMap: Record<string, string> = {
-  vi: "d MMM",
-  en: "MMM d",
-};
+const CREATE_TAG_VALUE = "createTag";
 
 interface TaskDetailProps {
   task: Task;
@@ -30,6 +32,13 @@ interface TaskDetailProps {
 export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
   const { t, i18n } = useTranslation();
   const { updateTask, deleteTask, toggleTask } = useTodoStore();
+  const {
+    getDisplayTags,
+    searchTagsResults,
+    tagSearchTerm,
+    setTagSearchTerm,
+    addTag,
+  } = useTodo();
   const priorityConfig = getPriorityConfig();
 
   const [title, setTitle] = useState(task.title);
@@ -38,6 +47,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     task.priority ?? TaskPriorityType.NONE,
   );
   const [deadline, setDeadline] = useState<number | undefined>(task.deadline);
+  const [tags, setTags] = useState<string[]>(task.tags || []);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -111,6 +121,23 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     });
   };
 
+  const onSelectTag = (tagId: string) => {
+    if (!tagId) return;
+    if (tagId === CREATE_TAG_VALUE) {
+      addTag(tagSearchTerm, COLORS.BLUE_50);
+    } else {
+      let newTags: string[] = [];
+      if (tags.includes(tagId)) {
+        newTags = tags.filter((tag) => tag !== tagId);
+      } else {
+        newTags = [...tags, tagId];
+      }
+
+      setTags(newTags);
+      updateTask(task.id, { tags: newTags });
+    }
+  };
+
   const priorityData = [
     {
       label: (
@@ -158,8 +185,47 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     },
   ];
 
+  const tagsData = useMemo(() => {
+    return searchTagsResults.length > 0
+      ? searchTagsResults.map((item) => {
+          return {
+            value: item.id,
+            label: (
+              <div
+                className={`rounded-full border px-2 ${tags.includes(item.id) ? "border-transparent" : "border-white"}`}
+              >
+                <Typography
+                  className={`${tags.includes(item.id) ? "text-gray-300!" : "text-text-white"}`}
+                >
+                  #{item.title}
+                </Typography>
+              </div>
+            ),
+            color: item.color,
+          };
+        })
+      : [
+          {
+            label: (
+              <div className="w-full flex items-center gap-1">
+                <PlusIcon />
+                <Typography className="truncate flex-1">
+                  {t("toDo.tag.createNew", { tagName: tagSearchTerm })}
+                </Typography>
+              </div>
+            ),
+            value: CREATE_TAG_VALUE,
+          },
+        ];
+  }, [searchTagsResults, t, tagSearchTerm, tags]);
+
+  const deadlineDate = useMemo(
+    () => (task.deadline ? new Date(task.deadline) : undefined),
+    [task.deadline],
+  );
+
   return (
-    <div className="flex flex-col gap-3 min-w-72">
+    <div className="flex flex-col gap-3 min-w-72 max-w-100">
       <div className="flex items-center justify-between gap-3">
         <Checkbox
           checked={task.isCompleted}
@@ -172,11 +238,18 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
             <Button
               type="button"
               icon={CalendarIcon}
+              iconColor={
+                deadline ? getDeadlineColor(deadlineDate) : COLORS.WHITE
+              }
               text={getDeadlineLabel()}
-              textClassName="text-gray-300!"
-              style={deadline ? { backgroundColor: COLORS.BLUE_50 } : undefined}
+              className="hover:bg-white/40! bg-transparent!"
+              textStyle={{
+                color: deadline ? getDeadlineColor(deadlineDate) : COLORS.WHITE,
+              }}
             />
           </DatePicker>
+
+          <div className="h-6 w-px bg-white/20" />
 
           <Dropdown
             data={priorityData}
@@ -187,8 +260,8 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
             <Button
               type="button"
               icon={FlagIcon}
-              color={priorityConfig[priority].color}
-              text={priorityConfig[priority].label}
+              iconColor={priorityConfig[priority].color}
+              className="hover:bg-white/40! bg-transparent!"
               textClassName="text-gray-300!"
               style={{ backgroundColor: priorityConfig[priority].bgColor }}
             />
@@ -203,7 +276,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
         onChange={(e) => setTitle(e.target.value)}
         onBlur={handleTitleBlur}
         placeholder={t("toDo.detail.addTitle")}
-        className={`w-full text-white text-[20px] max-h-40 font-medium placeholder:text-white/50 outline-none resize-none overflow-y-auto`}
+        className={`w-full text-white text-sz-large max-h-40 font-medium placeholder:text-white/50 outline-none resize-none overflow-y-auto`}
       />
 
       <textarea
@@ -213,8 +286,61 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
         onChange={(e) => setDescription(e.target.value)}
         onBlur={handleDescriptionBlur}
         placeholder={t("toDo.detail.addDescription")}
-        className="w-full text-white text-[18px] max-h-40 font-light placeholder:text-white/50 outline-none resize-none overflow-y-auto"
+        className="w-full text-white text-sz-default max-h-40 font-light placeholder:text-white/50 outline-none resize-none overflow-y-auto"
       />
+
+      <div className="flex gap-2 flex-wrap">
+        <Dropdown
+          data={tagsData}
+          value={tags}
+          multipleSelect
+          isCompact
+          menuClassName="max-w-80"
+          menuItemClassName="p-0!"
+          onChange={onSelectTag}
+          onOpenChange={() => setTagSearchTerm("")}
+          header={
+            <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
+              <RefreshIcon size={16} />
+              <input
+                value={tagSearchTerm}
+                placeholder={t("toDo.tag.searchPlaceholder")}
+                className="w-full outline-none text-white font-light text-sz-default"
+                onChange={(e) => setTagSearchTerm(e.target.value)}
+              />
+            </div>
+          }
+        >
+          <Button
+            className="p-0! bg-transparent!"
+            iconColor={COLORS.WHITE}
+            icon={TagIcon}
+          />
+        </Dropdown>
+
+        {getDisplayTags(tags).map((item) => {
+          return (
+            <div
+              className="flex items-center gap-2 rounded-full pl-2 pr-0.5"
+              style={{ backgroundColor: item.color }}
+            >
+              <Typography
+                variant={TypoVariants.DESCRIPTION}
+                className="text-gray-300!"
+              >
+                #{item.title}
+              </Typography>
+
+              <Button
+                className="p-0! bg-transparent!"
+                icon={MinusIcon}
+                iconColor={COLORS.GRAY_300}
+                onClick={() => onSelectTag(item.id)}
+              />
+            </div>
+          );
+        })}
+      </div>
 
       {/* Delete Button */}
       <div className="border-t border-white/20 pt-3 mt-1">

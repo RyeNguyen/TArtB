@@ -9,4 +9,5 @@ export interface IconProps extends SVGProps<SVGSVGElement> {
 export interface ItemProps {
   value: string;
   label: ReactNode;
+  color?: string;
 }

@@ -1,7 +1,7 @@
 import { Typography } from "@atoms/Typography";
 import { COLORS } from "@constants/colors";
 import { TypoVariants } from "@constants/common";
-import { ButtonHTMLAttributes, ElementType } from "react";
+import { ButtonHTMLAttributes, CSSProperties, ElementType } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ElementType;
@@ -9,6 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconColor?: string;
   isOutline?: boolean;
   text?: string;
+  textStyle?: CSSProperties;
   textVariant?: TypoVariants;
   className?: string;
   textClassName?: string;
@@ -20,6 +21,7 @@ export const Button = ({
   iconColor = COLORS.GRAY_300,
   isOutline = false,
   text,
+  textStyle,
   textVariant,
   className,
   textClassName,
@@ -37,6 +39,7 @@ export const Button = ({
         <Typography
           variant={textVariant}
           className={`${isOutline && "text-white!"} ${textClassName}`}
+          style={textStyle}
         >
           {text}
         </Typography>

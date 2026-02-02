@@ -5,7 +5,7 @@ import { Typography } from "@atoms/Typography";
 import { COLORS } from "@constants/colors";
 import { TaskPriorityType } from "@constants/common";
 
-import { getPriorityConfig } from "@constants/toDoConfig";
+import { getPriorityConfig, shortDateFormatMap } from "@constants/toDoConfig";
 import { useTodo } from "@hooks/useToDo";
 import CalendarIcon from "@icons/Calendar";
 import FlagIcon from "@icons/Flag";
@@ -18,16 +18,13 @@ import RefreshIcon from "@icons/Refresh";
 import { useMemo } from "react";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
-const shortDateFormatMap: Record<string, string> = {
-  vi: "d MMM",
-  en: "MMM d",
-};
 const CREATE_TAG_VALUE = "createTag";
 
 export const ToDoForm = () => {
   const { t, i18n } = useTranslation();
   const priorityConfig = getPriorityConfig();
   const {
+    tags,
     priority,
     setPriority,
     deadline,
@@ -35,27 +32,19 @@ export const ToDoForm = () => {
     inputValue,
     setInputValue,
     setIsInputFocused,
+    searchTagsResults,
     tagSearchTerm,
     setTagSearchTerm,
+    selectedTags,
+    handleSelectTag,
     loading,
 
     handleAddTask,
     handleBlur,
+    addTag,
   } = useTodo();
 
   const isAdding = loading.isAddingTask;
-
-  const getDeadlineLabel = (): string => {
-    if (!deadline) return t("toDo.deadline.noDate");
-    const date = new Date(deadline);
-    if (isToday(date)) return t("toDo.deadline.today");
-    if (isTomorrow(date)) return t("toDo.deadline.tomorrow");
-    const dateFormat =
-      shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
-    return format(date, dateFormat, {
-      locale: localeMap[i18n.language] || enUS,
-    });
-  };
 
   const priorityData = [
     {
@@ -105,35 +94,87 @@ export const ToDoForm = () => {
   ];
 
   const tagsData = useMemo(() => {
-    return [
-      {
-        label: (
-          <div className="w-full flex items-center gap-1">
-            <PlusIcon />
-            <Typography className="truncate flex-1">
-              {t("toDo.list.createNew", { listName: tagSearchTerm })}
-            </Typography>
-          </div>
-        ),
-        value: CREATE_TAG_VALUE,
-      },
-    ];
-  }, [t, tagSearchTerm]);
+    return searchTagsResults.length > 0
+      ? searchTagsResults.map((item) => {
+          return {
+            value: item.id,
+            label: (
+              <div
+                className={`rounded-full border px-2 ${selectedTags.includes(item.id) ? "border-transparent" : "border-white"}`}
+              >
+                <Typography
+                  className={`${selectedTags.includes(item.id) ? "text-gray-300!" : "text-text-white"}`}
+                >
+                  #{item.title}
+                </Typography>
+              </div>
+            ),
+            color: item.color,
+          };
+        })
+      : [
+          {
+            label: (
+              <div className="w-full flex items-center gap-1">
+                <PlusIcon />
+                <Typography className="truncate flex-1">
+                  {t("toDo.tag.createNew", { tagName: tagSearchTerm })}
+                </Typography>
+              </div>
+            ),
+            value: CREATE_TAG_VALUE,
+          },
+        ];
+  }, [searchTagsResults, selectedTags, t, tagSearchTerm]);
+
+  const firstTag = useMemo(
+    () => tags.find((item) => item.id === selectedTags[0]),
+    [selectedTags, tags],
+  );
+
+  const displayTag = useMemo(() => {
+    if (selectedTags.length === 1) return `#${firstTag?.title}`;
+    if (selectedTags.length > 1)
+      return `#${firstTag?.title} + ${selectedTags.length - 1}`;
+    return t("toDo.tag.none");
+  }, [firstTag?.title, selectedTags.length, t]);
+
+  const getDeadlineLabel = (): string => {
+    if (!deadline) return t("toDo.deadline.noDate");
+    const date = new Date(deadline);
+    if (isToday(date)) return t("toDo.deadline.today");
+    if (isTomorrow(date)) return t("toDo.deadline.tomorrow");
+    const dateFormat =
+      shortDateFormatMap[i18n.language] || shortDateFormatMap.en;
+    return format(date, dateFormat, {
+      locale: localeMap[i18n.language] || enUS,
+    });
+  };
+
+  const onSelectTag = (tagId: string) => {
+    if (!tagId) return;
+    if (tagId === CREATE_TAG_VALUE) {
+      addTag(tagSearchTerm, COLORS.BLUE_50);
+    } else {
+      handleSelectTag(tagId);
+    }
+  };
 
   return (
     <form onSubmit={handleAddTask} className="relative flex items-center gap-2">
       <div
         onFocus={() => setIsInputFocused(true)}
         onBlur={handleBlur}
-        className="w-full flex flex-col gap-2 bg-white/50 rounded-2xl p-1"
+        className="w-full flex flex-1 flex-col gap-2 bg-white/50 rounded-2xl p-1"
       >
         <input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={t("toDo.inputPlaceholder")}
-          className="ml-2 text-gray-300 font-light text-sz-default placeholder:text-grey-300/50 outline-none"
+          className="flex-1 ml-2 text-gray-300 font-light text-sz-default placeholder:text-grey-300/50 outline-none"
           disabled={isAdding}
         />
+
         {/* {isInputFocused && ( */}
         <div className="flex gap-2">
           <DatePicker value={deadline} onChange={setDeadline}>
@@ -164,13 +205,20 @@ export const ToDoForm = () => {
 
           <Dropdown
             data={tagsData}
+            value={selectedTags}
+            multipleSelect
+            isCompact
+            className="flex-1"
             menuClassName="max-w-80"
+            menuItemClassName="p-0!"
+            onChange={onSelectTag}
+            onOpenChange={() => setTagSearchTerm("")}
             header={
               <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
                 <RefreshIcon size={16} />
                 <input
                   value={tagSearchTerm}
-                  placeholder={t("toDo.list.searchPlaceholder")}
+                  placeholder={t("toDo.tag.searchPlaceholder")}
                   className="w-full outline-none text-white font-light text-sz-default"
                   onChange={(e) => setTagSearchTerm(e.target.value)}
                 />
@@ -179,9 +227,11 @@ export const ToDoForm = () => {
           >
             <Button
               type="button"
-              textClassName="text-gray-300!"
-              icon={TagIcon}
-              text="None"
+              className="flex-1 overflow-hidden"
+              textClassName="flex-1 truncate text-gray-300!"
+              icon={displayTag !== t("toDo.tag.none") ? undefined : TagIcon}
+              text={displayTag}
+              style={{ backgroundColor: firstTag?.color }}
             />
           </Dropdown>
         </div>

@@ -73,6 +73,7 @@ interface TodoStore {
 
   // Tag actions
   addTag: (title: string, color?: string) => Promise<string>;
+  searchTag: (searchTerm: string) => Promise<Tag[]>;
   deleteTag: (id: string) => Promise<void>;
 
   // Bulk actions
@@ -314,9 +315,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       const now = Date.now();
       const listTasks = tasks.filter((t) => t.listId === listId);
       const maxOrder =
-        listTasks.length > 0
-          ? Math.max(...listTasks.map((t) => t.order))
-          : -1;
+        listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
 
       const newTask: Task = {
         id: generateId(),
@@ -560,9 +559,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     try {
       const listTasks = tasks.filter((t) => t.listId === newListId);
       const maxOrder =
-        listTasks.length > 0
-          ? Math.max(...listTasks.map((t) => t.order))
-          : -1;
+        listTasks.length > 0 ? Math.max(...listTasks.map((t) => t.order)) : -1;
 
       const updates = {
         listId: newListId,
@@ -582,6 +579,52 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       throw error;
     } finally {
       setLoading("isUpdatingTask", false);
+    }
+  },
+
+  addTag: async (title, color) => {
+    const { tags } = get();
+    const previousTags = tags;
+
+    try {
+      const now = Date.now();
+
+      const newTag: Tag = {
+        id: generateId(),
+        title,
+        color,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      set({ tags: [...tags, newTag] });
+      await todoService.saveTag(newTag);
+      return newTag.id;
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error adding tag:", error);
+      throw error;
+    }
+  },
+
+  searchTag: async (searchTerm: string) => {
+    const { tags } = get();
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return tags;
+    return tags.filter((item) => item.title.toLowerCase().includes(term));
+  },
+
+  deleteTag: async (id) => {
+    const { tags } = get();
+    const previousTags = tags;
+
+    try {
+      set({ tags: tags.filter((tag) => tag.id !== id) });
+      await todoService.deleteTagById(id);
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error deleting tag:", error);
+      throw error;
     }
   },
 
@@ -624,44 +667,5 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
   getListById: (id) => {
     return get().lists.find((list) => list.id === id);
-  },
-
-  addTag: async (title, color) => {
-    const { tags } = get();
-    const previousTags = tags;
-
-    try {
-      const now = Date.now();
-
-      const newTag: Tag = {
-        id: generateId(),
-        title,
-        color,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      set({ tags: [...tags, newTag] });
-      await todoService.saveTag(newTag);
-      return newTag.id;
-    } catch (error) {
-      set({ tags: previousTags });
-      console.error("[TodoStore] Error adding tag:", error);
-      throw error;
-    }
-  },
-
-  deleteTag: async (id) => {
-    const { tags } = get();
-    const previousTags = tags;
-
-    try {
-      set({ tags: tags.filter((tag) => tag.id !== id) });
-      await todoService.deleteTagById(id);
-    } catch (error) {
-      set({ tags: previousTags });
-      console.error("[TodoStore] Error deleting tag:", error);
-      throw error;
-    }
   },
 }));

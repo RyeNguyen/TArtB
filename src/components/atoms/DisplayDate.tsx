@@ -9,8 +9,8 @@ import { Typography } from "@atoms/Typography";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 const dateFormatMap: Record<string, string> = {
-  vi: "EEEE, d MMMM",
-  en: "EEEE, MMMM d",
+  vi: "EEEE, dd MMMM",
+  en: "EEEE, MMMM dd",
 };
 
 export const DisplayDate = () => {
