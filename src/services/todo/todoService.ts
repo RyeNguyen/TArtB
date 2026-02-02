@@ -49,6 +49,7 @@ export interface TodoService {
 }
 
 const STORAGE_KEY = "tartb-todo";
+const LAST_USER_KEY = "tartb-todo-last-user";
 
 // ============================================================================
 // Local Storage Service (for anonymous users)
@@ -250,6 +251,54 @@ class LocalTodoService implements TodoService {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error("Error saving todo data to localStorage:", error);
+    }
+  }
+
+  // === Cache management (for real-time sync) ===
+  updateCache(data: TodoData): void {
+    this.cache = data;
+  }
+
+  getCache(): TodoData | null {
+    return this.cache;
+  }
+
+  // === Last user tracking ===
+  async getLastUserId(): Promise<string | null> {
+    const storage = getStorage();
+
+    if (storage) {
+      try {
+        const result = await storage.get(LAST_USER_KEY);
+        return result[LAST_USER_KEY] || null;
+      } catch {
+        return null;
+      }
+    }
+
+    return localStorage.getItem(LAST_USER_KEY);
+  }
+
+  async setLastUserId(userId: string | null): Promise<void> {
+    const storage = getStorage();
+
+    if (storage) {
+      try {
+        if (userId) {
+          await storage.set({ [LAST_USER_KEY]: userId });
+        } else {
+          await storage.remove(LAST_USER_KEY);
+        }
+        return;
+      } catch (error) {
+        console.error("Error saving last user ID:", error);
+      }
+    }
+
+    if (userId) {
+      localStorage.setItem(LAST_USER_KEY, userId);
+    } else {
+      localStorage.removeItem(LAST_USER_KEY);
     }
   }
 }
@@ -551,187 +600,265 @@ class FirestoreTodoService implements TodoService {
 }
 
 // ============================================================================
-// Hybrid Service (switches based on auth state)
+// Hybrid Service (Local-first architecture)
+// - All operations write to local first (instant UI)
+// - If authenticated, sync to cloud in background
+// - Real-time listener updates local when cloud changes
 // ============================================================================
 
 class HybridTodoService implements TodoService {
   private localService = new LocalTodoService();
   private firestoreService: FirestoreTodoService | null = null;
-  private hasMigrated = false;
 
-  private getService(): TodoService {
+  /**
+   * Ensure Firestore service is initialized for the current user
+   */
+  private ensureFirestoreService(): FirestoreTodoService | null {
     const user = auth.currentUser;
-    if (user) {
-      if (
-        !this.firestoreService ||
-        this.firestoreService["userId"] !== user.uid
-      ) {
-        this.firestoreService?.cleanup();
-        this.firestoreService = new FirestoreTodoService(user.uid);
-      }
-      return this.firestoreService;
+    if (!user) {
+      this.firestoreService?.cleanup();
+      this.firestoreService = null;
+      return null;
     }
-    return this.localService;
+
+    if (
+      !this.firestoreService ||
+      this.firestoreService["userId"] !== user.uid
+    ) {
+      this.firestoreService?.cleanup();
+      this.firestoreService = new FirestoreTodoService(user.uid);
+    }
+
+    return this.firestoreService;
   }
 
+  /**
+   * Sync to cloud in background (fire and forget)
+   * Logs errors but doesn't throw
+   */
+  private syncToCloud<T>(operation: () => Promise<T>): void {
+    const firestore = this.ensureFirestoreService();
+    if (!firestore) return;
+
+    operation().catch((error) => {
+      console.error("[Sync] Background sync failed:", error);
+    });
+  }
+
+  // === Load: Always from local ===
   async load(): Promise<TodoData> {
-    return this.getService().load();
+    return this.localService.load();
   }
 
+  // === Bulk operations: Local first, then sync ===
   async saveLists(lists: TaskList[]): Promise<void> {
-    return this.getService().saveLists(lists);
+    await this.localService.saveLists(lists);
+    this.syncToCloud(() => this.firestoreService!.saveLists(lists));
   }
 
   async saveTasks(tasks: Task[]): Promise<void> {
-    return this.getService().saveTasks(tasks);
+    await this.localService.saveTasks(tasks);
+    this.syncToCloud(() => this.firestoreService!.saveTasks(tasks));
   }
 
   async saveTags(tags: Tag[]): Promise<void> {
-    return this.getService().saveTags(tags);
+    await this.localService.saveTags(tags);
+    this.syncToCloud(() => this.firestoreService!.saveTags(tags));
   }
 
   async clear(): Promise<void> {
-    return this.getService().clear();
+    await this.localService.clear();
+    this.syncToCloud(() => this.firestoreService!.clear());
   }
 
   // === Granular List operations ===
   async saveList(list: TaskList): Promise<void> {
-    return this.getService().saveList(list);
+    await this.localService.saveList(list);
+    this.syncToCloud(() => this.firestoreService!.saveList(list));
   }
 
   async deleteListById(id: string): Promise<void> {
-    return this.getService().deleteListById(id);
+    await this.localService.deleteListById(id);
+    this.syncToCloud(() => this.firestoreService!.deleteListById(id));
   }
 
   // === Granular Task operations ===
   async saveTask(task: Task): Promise<void> {
-    return this.getService().saveTask(task);
+    await this.localService.saveTask(task);
+    this.syncToCloud(() => this.firestoreService!.saveTask(task));
   }
 
   async updateTaskFields(
     id: string,
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ): Promise<void> {
-    return this.getService().updateTaskFields(id, updates);
+    await this.localService.updateTaskFields(id, updates);
+    this.syncToCloud(() => this.firestoreService!.updateTaskFields(id, updates));
   }
 
   async deleteTaskById(id: string): Promise<void> {
-    return this.getService().deleteTaskById(id);
+    await this.localService.deleteTaskById(id);
+    this.syncToCloud(() => this.firestoreService!.deleteTaskById(id));
   }
 
   // === Granular Tag operations ===
   async saveTag(tag: Tag): Promise<void> {
-    return this.getService().saveTag(tag);
+    await this.localService.saveTag(tag);
+    this.syncToCloud(() => this.firestoreService!.saveTag(tag));
   }
 
   async deleteTagById(id: string): Promise<void> {
-    return this.getService().deleteTagById(id);
+    await this.localService.deleteTagById(id);
+    this.syncToCloud(() => this.firestoreService!.deleteTagById(id));
   }
 
   // === Bulk operations ===
   async deleteTasks(ids: string[]): Promise<void> {
-    return this.getService().deleteTasks(ids);
+    await this.localService.deleteTasks(ids);
+    this.syncToCloud(() => this.firestoreService!.deleteTasks(ids));
   }
 
   async updateTasksOrders(
     updates: Array<{ id: string; order: number; updatedAt: number }>,
   ): Promise<void> {
-    return this.getService().updateTasksOrders(updates);
+    await this.localService.updateTasksOrders(updates);
+    this.syncToCloud(() => this.firestoreService!.updateTasksOrders(updates));
   }
 
   /**
-   * Migrate local data to Firestore on first sign-in (Smart Merge)
-   * - Items with same ID: keep the one with newer updatedAt
-   * - Items only in local: add to cloud
-   * - Items only in cloud: keep in cloud
+   * Handle sign-in: Check user, merge/replace data, setup sync
+   * - Different user: Clear local, load from cloud
+   * - Same user: Smart merge local ↔ cloud
    */
-  async migrateToFirestore(): Promise<void> {
+  async onSignIn(): Promise<TodoData> {
     const user = auth.currentUser;
-    if (!user || this.hasMigrated) {
-      console.log("[Migration] Skipped:", {
-        hasUser: !!user,
-        hasMigrated: this.hasMigrated,
-      });
-      return;
+    if (!user) {
+      return this.localService.load();
     }
 
-    try {
-      const rawLocalData = await this.localService.load();
-      // Ensure all arrays exist (handle corrupted/incomplete data)
-      const localData: TodoData = {
-        lists: rawLocalData?.lists || [],
-        tasks: rawLocalData?.tasks || [],
-        tags: rawLocalData?.tags || [],
-      };
+    const lastUserId = await this.localService.getLastUserId();
+    const isSameUser = lastUserId === user.uid;
 
-      if (
-        localData.lists.length === 0 &&
-        localData.tasks.length === 0 &&
-        localData.tags.length === 0
-      ) {
-        console.log("[Migration] No local data to migrate, skipping");
-        this.hasMigrated = true;
-        return;
-      }
+    console.log("[Sync] Sign-in detected:", {
+      currentUser: user.uid,
+      lastUser: lastUserId,
+      isSameUser,
+    });
 
-      const firestoreService = new FirestoreTodoService(user.uid);
-      const cloudData = await firestoreService.load();
+    this.ensureFirestoreService();
 
-      // Smart merge function
-      const smartMerge = <T extends { id: string; updatedAt: number }>(
-        local: T[],
-        cloud: T[],
-      ): T[] => {
-        const merged = new Map<string, T>();
-
-        // Add all cloud items first
-        cloud.forEach((item) => merged.set(item.id, item));
-
-        // Merge local items (newer wins)
-        local.forEach((localItem) => {
-          const cloudItem = merged.get(localItem.id);
-          if (!cloudItem || localItem.updatedAt > cloudItem.updatedAt) {
-            merged.set(localItem.id, localItem);
-          }
-        });
-
-        return Array.from(merged.values());
-      };
-
-      // Merge each collection
-      const mergedLists = smartMerge(localData.lists, cloudData.lists);
-      const mergedTasks = smartMerge(localData.tasks, cloudData.tasks);
-      const mergedTags = smartMerge(localData.tags, cloudData.tags);
-
-      // Save merged data to Firestore
-      await Promise.all([
-        firestoreService.saveLists(mergedLists),
-        firestoreService.saveTasks(mergedTasks),
-        firestoreService.saveTags(mergedTags),
-      ]);
-
-      this.hasMigrated = true;
-    } catch (error) {
-      console.error("Migration failed:", error);
-      throw error;
+    if (!isSameUser && lastUserId !== null) {
+      // Different user: Clear local data to prevent cross-contamination
+      console.log("[Sync] Different user detected, clearing local data");
+      await this.localService.clear();
     }
+
+    // Load both local and cloud data
+    const [localData, cloudData] = await Promise.all([
+      this.localService.load(),
+      this.firestoreService!.load(),
+    ]);
+
+    // Smart merge (newer wins)
+    const mergedData = this.smartMerge(localData, cloudData);
+
+    // Save merged data to both local and cloud
+    await this.localService.saveLists(mergedData.lists);
+    await this.localService.saveTasks(mergedData.tasks);
+    await this.localService.saveTags(mergedData.tags);
+
+    // Sync merged data to cloud (in case local had newer items)
+    await Promise.all([
+      this.firestoreService!.saveLists(mergedData.lists),
+      this.firestoreService!.saveTasks(mergedData.tasks),
+      this.firestoreService!.saveTags(mergedData.tags),
+    ]);
+
+    // Remember this user
+    await this.localService.setLastUserId(user.uid);
+
+    console.log("[Sync] Sign-in complete, data merged");
+    return mergedData;
   }
 
   /**
-   * Subscribe to real-time updates (only works when authenticated)
+   * Handle sign-out: Keep local data, clear user tracking
+   */
+  async onSignOut(): Promise<void> {
+    console.log("[Sync] Sign-out, keeping local data");
+    this.firestoreService?.cleanup();
+    this.firestoreService = null;
+    // Keep local data but clear the user association
+    // Next sign-in with different user will clear it
+  }
+
+  /**
+   * Smart merge: Items with same ID use newer updatedAt
+   */
+  private smartMerge(local: TodoData, cloud: TodoData): TodoData {
+    const mergeArray = <T extends { id: string; updatedAt: number }>(
+      localArr: T[],
+      cloudArr: T[],
+    ): T[] => {
+      const merged = new Map<string, T>();
+
+      // Add all cloud items first
+      cloudArr.forEach((item) => merged.set(item.id, item));
+
+      // Merge local items (newer wins)
+      localArr.forEach((localItem) => {
+        const cloudItem = merged.get(localItem.id);
+        if (!cloudItem || localItem.updatedAt > cloudItem.updatedAt) {
+          merged.set(localItem.id, localItem);
+        }
+      });
+
+      return Array.from(merged.values());
+    };
+
+    return {
+      lists: mergeArray(local.lists, cloud.lists),
+      tasks: mergeArray(local.tasks, cloud.tasks),
+      tags: mergeArray(local.tags, cloud.tags),
+    };
+  }
+
+  /**
+   * Subscribe to real-time updates
+   * Updates local storage when cloud changes (from other devices)
    */
   subscribe(callback: (data: TodoData) => void): (() => void) | null {
-    if (this.firestoreService) {
-      return this.firestoreService.subscribe(callback);
-    }
-    return null;
+    const firestore = this.ensureFirestoreService();
+    if (!firestore) return null;
+
+    return firestore.subscribe(async (cloudData) => {
+      // Update local cache with cloud data
+      this.localService.updateCache(cloudData);
+
+      // Persist to local storage
+      await Promise.all([
+        this.localService.saveLists(cloudData.lists),
+        this.localService.saveTasks(cloudData.tasks),
+        this.localService.saveTags(cloudData.tags),
+      ]);
+
+      // Notify UI
+      callback(cloudData);
+    });
   }
 
   /**
-   * Check if currently using Firestore
+   * Check if currently authenticated
    */
-  isUsingFirestore(): boolean {
+  isAuthenticated(): boolean {
     return !!auth.currentUser;
+  }
+
+  /**
+   * Get the local service (for direct access if needed)
+   */
+  getLocalService(): LocalTodoService {
+    return this.localService;
   }
 }
 

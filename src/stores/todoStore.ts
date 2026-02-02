@@ -124,13 +124,23 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   },
 
   onAuthStateChange: async (isAuthenticated) => {
-    const { cleanupRealtimeSync, setupRealtimeSync, loadData } = get();
+    const { cleanupRealtimeSync, setupRealtimeSync } = get();
 
     if (isAuthenticated) {
       set({ isSyncing: true });
       try {
-        await todoService.migrateToFirestore();
-        await loadData(); // Reload merged data from Firestore
+        // Sign in: merge local ↔ cloud, setup real-time sync
+        const mergedData = await todoService.onSignIn();
+        set({
+          lists: mergedData.lists,
+          tasks: mergedData.tasks,
+          tags: mergedData.tags,
+          isLoaded: true,
+          hasInitializedDefaultList:
+            mergedData.lists.length > 0
+              ? true
+              : get().hasInitializedDefaultList,
+        });
         setupRealtimeSync();
       } catch (error) {
         console.error(
@@ -141,9 +151,11 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
         set({ isSyncing: false });
       }
     } else {
-      console.log("[TodoStore] Cleaning up and reloading local data...");
+      // Sign out: cleanup sync, keep local data
+      console.log("[TodoStore] Sign out, keeping local data...");
       cleanupRealtimeSync();
-      await loadData(); // Reload from local storage
+      await todoService.onSignOut();
+      // Data stays in local, no need to reload
     }
   },
 
