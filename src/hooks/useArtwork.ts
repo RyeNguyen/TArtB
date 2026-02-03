@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useArtworkStore } from '../stores/artworkStore';
 import { fetchRandomArtworkFromFirestore } from '../services/firebase/firestoreService';
@@ -99,6 +99,7 @@ export const useArtwork = () => {
     gcTime: settings.artwork.changeInterval * 60 * 1000 * 2, // Keep in cache for 2x the interval
     refetchInterval: settings.artwork.changeInterval * 60 * 1000, // Auto-refetch based on interval
     refetchIntervalInBackground: false, // Don't refetch when tab is not active
+    placeholderData: keepPreviousData, // Keep showing previous artwork while fetching new one
   });
 
   if (query.isLoading !== useArtworkStore.getState().isLoading) {
