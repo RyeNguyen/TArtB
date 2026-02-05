@@ -27,6 +27,7 @@ import { SortableTaskItem } from "./SortableTaskItem";
 import { Typography } from "@atoms/Typography";
 import { TypoVariants } from "@constants/common";
 import { shortDateFormatMap } from "@constants/toDoConfig";
+import { useConfetti } from "@organisms/ToDo";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -80,6 +81,7 @@ const DroppableGroup = ({
 export const ToDoList = () => {
   const { t, i18n } = useTranslation();
   const { groupedTasks, handleToggleTask, handleReorderTask } = useTodo();
+  const fireConfetti = useConfetti();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [_, setActiveTask] = useState<Task | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -132,6 +134,23 @@ export const ToDoList = () => {
     // Fallback to rect intersection for edge cases
     return rectIntersection(args);
   }, []);
+
+  const handleToggleWithConfetti = useCallback(
+    (taskId: string, e?: React.MouseEvent) => {
+      // Find the task to check if marking as completed
+      const task = groupedTasks
+        .flatMap((g) => g.tasks)
+        .find((t) => t.id === taskId);
+
+      if (task && !task.isCompleted && e) {
+        // Fire confetti from click position
+        fireConfetti?.(e.clientX, e.clientY);
+      }
+
+      handleToggleTask(taskId);
+    },
+    [groupedTasks, fireConfetti, handleToggleTask],
+  );
 
   const formatDeadline = (deadline: number): string => {
     const date = new Date(deadline);
@@ -284,7 +303,7 @@ export const ToDoList = () => {
                 groupId={group.id}
                 isOpen={openTaskId === task.id}
                 onOpenChange={(open) => handleOpenChange(task.id, open)}
-                onToggle={handleToggleTask}
+                onToggle={handleToggleWithConfetti}
                 formatDeadline={formatDeadline}
                 disableSortAnimation={isCrossGroupDrag}
               />

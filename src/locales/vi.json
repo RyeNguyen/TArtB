@@ -91,7 +91,8 @@
     "detail": {
       "addTitle": "Thêm tiêu đề...",
       "addDescription": "Thêm mô tả...",
-      "delete": "Xóa công việc"
+      "delete": "Xóa công việc",
+      "moveTo": "Di chuyển đến"
     },
     "toast": {
       "taskAdded": "Đã thêm công việc",

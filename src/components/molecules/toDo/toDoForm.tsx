@@ -14,8 +14,8 @@ import TagIcon from "@icons/Tag";
 import { useTranslation } from "react-i18next";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
-import RefreshIcon from "@icons/Refresh";
 import { useMemo } from "react";
+import SearchIcon from "@icons/SearchIcon";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 const CREATE_TAG_VALUE = "createTag";
@@ -151,10 +151,12 @@ export const ToDoForm = () => {
     });
   };
 
-  const onSelectTag = (tagId: string) => {
+  const onSelectTag = async (tagId: string) => {
     if (!tagId) return;
     if (tagId === CREATE_TAG_VALUE) {
-      addTag(tagSearchTerm, COLORS.BLUE_50);
+      const newTagId = await addTag(tagSearchTerm, COLORS.BLUE_50);
+      handleSelectTag(newTagId);
+      setTagSearchTerm("");
     } else {
       handleSelectTag(tagId);
     }
@@ -215,7 +217,7 @@ export const ToDoForm = () => {
             onOpenChange={() => setTagSearchTerm("")}
             header={
               <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
-                <RefreshIcon size={16} />
+                <SearchIcon />
                 <input
                   value={tagSearchTerm}
                   placeholder={t("toDo.tag.searchPlaceholder")}

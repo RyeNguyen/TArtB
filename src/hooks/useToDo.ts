@@ -39,6 +39,7 @@ export const useTodo = () => {
     getTasksByList,
     reorderTaskInGroup,
     normalizeTaskOrders,
+    moveTaskToList,
   } = useTodoStore();
 
   const toDoSettings = settings.widgets[WidgetId.TODO];
@@ -164,6 +165,7 @@ export const useTodo = () => {
     if (!selectedListId) return [];
     const result = getTasksByList(selectedListId);
     return sortTasks(result, toDoSettings.sortBy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedListId, tasks, toDoSettings.sortBy, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
@@ -411,5 +413,6 @@ export const useTodo = () => {
     handleAddTask,
     handleToggleTask,
     handleReorderTask,
+    moveTaskToList,
   };
 };
