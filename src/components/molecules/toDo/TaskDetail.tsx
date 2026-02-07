@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { Task } from "@/types/toDo";
 import { Typography } from "@atoms/Typography";
 import { Button } from "@atoms/button/Button";
@@ -10,20 +16,21 @@ import { getPriorityConfig, shortDateFormatMap } from "@constants/toDoConfig";
 import { useTodoStore } from "@stores/todoStore";
 import CalendarIcon from "@icons/Calendar";
 import FlagIcon from "@icons/Flag";
-import MinusIcon from "@icons/Minus";
 import { useTranslation } from "react-i18next";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
 import { Checkbox } from "@atoms/Checkbox";
 import PlusIcon from "@icons/Plus";
 import { useTodo } from "@hooks/useToDo";
-import RefreshIcon from "@icons/Refresh";
 import TagIcon from "@icons/Tag";
 import { getDeadlineColor } from "@utils/dateUtils";
+import SearchIcon from "@icons/SearchIcon";
+import DeleteIcon from "@icons/Delete";
+import { useConfetti } from "@organisms/ToDo";
+import CloseIcon from "@icons/Close";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 const CREATE_TAG_VALUE = "createTag";
-
 interface TaskDetailProps {
   task: Task;
   onClose: () => void;
@@ -38,8 +45,12 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     tagSearchTerm,
     setTagSearchTerm,
     addTag,
+    searchResults,
+    selectedList,
+    moveTaskToList,
   } = useTodo();
   const priorityConfig = getPriorityConfig();
+  const fireConfetti = useConfetti();
 
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
@@ -100,7 +111,10 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     updateTask(task.id, { deadline: value });
   };
 
-  const handleToggle = () => {
+  const handleToggle = (e: React.MouseEvent) => {
+    if (!task.isCompleted) {
+      fireConfetti?.(e.clientX, e.clientY);
+    }
     toggleTask(task.id);
   };
 
@@ -121,21 +135,29 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     });
   };
 
-  const onSelectTag = (tagId: string) => {
+  const onSelectTag = async (tagId: string) => {
     if (!tagId) return;
+    let newTags: string[] = [];
+
     if (tagId === CREATE_TAG_VALUE) {
-      addTag(tagSearchTerm, COLORS.BLUE_50);
+      const newTagId = await addTag(tagSearchTerm, COLORS.BLUE_50);
+      newTags = [...tags, newTagId];
+      setTagSearchTerm("");
     } else {
-      let newTags: string[] = [];
       if (tags.includes(tagId)) {
         newTags = tags.filter((tag) => tag !== tagId);
       } else {
         newTags = [...tags, tagId];
       }
-
-      setTags(newTags);
-      updateTask(task.id, { tags: newTags });
     }
+
+    setTags(newTags);
+    updateTask(task.id, { tags: newTags });
+  };
+
+  const onAssignTaskToList = (taskId: string, newListId: string) => {
+    moveTaskToList(taskId, newListId);
+    onClose();
   };
 
   const priorityData = [
@@ -185,6 +207,15 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     },
   ];
 
+  const listsData = useMemo(() => {
+    return searchResults.map((item) => {
+      return {
+        value: item.id,
+        label: item.title,
+      };
+    });
+  }, [searchResults]);
+
   const tagsData = useMemo(() => {
     return searchTagsResults.length > 0
       ? searchTagsResults.map((item) => {
@@ -226,7 +257,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
 
   return (
     <div className="flex flex-col gap-3 min-w-72 max-w-100">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 border-b border-white/20 pb-2">
         <Checkbox
           checked={task.isCompleted}
           borderColor={priorityConfig[priority].color}
@@ -301,7 +332,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
           onOpenChange={() => setTagSearchTerm("")}
           header={
             <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
-              <RefreshIcon size={16} />
+              <SearchIcon />
               <input
                 value={tagSearchTerm}
                 placeholder={t("toDo.tag.searchPlaceholder")}
@@ -321,7 +352,8 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
         {getDisplayTags(tags).map((item) => {
           return (
             <div
-              className="flex items-center gap-2 rounded-full pl-2 pr-0.5"
+              key={item.id}
+              className="flex items-center gap-1 rounded-full pl-2 pr-0.5"
               style={{ backgroundColor: item.color }}
             >
               <Typography
@@ -333,7 +365,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
 
               <Button
                 className="p-0! bg-transparent!"
-                icon={MinusIcon}
+                icon={CloseIcon}
                 iconColor={COLORS.GRAY_300}
                 onClick={() => onSelectTag(item.id)}
               />
@@ -342,15 +374,26 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
         })}
       </div>
 
-      {/* Delete Button */}
-      <div className="border-t border-white/20 pt-3 mt-1">
+      <div className="flex border-t items-center justify-between border-white/20 pt-3 mt-1">
+        <Dropdown
+          value={task.listId}
+          onChange={(listId: string) => onAssignTaskToList(task.id, listId)}
+          menuClassName="max-w-80"
+          header={t("toDo.detail.moveTo")}
+          data={listsData}
+        >
+          <Button
+            type="button"
+            text={selectedList?.title}
+            className="hover:bg-white/40! bg-transparent!"
+          />
+        </Dropdown>
+
         <Button
           type="button"
-          icon={MinusIcon}
+          icon={DeleteIcon}
           iconColor={COLORS.ERROR_400}
-          text={t("toDo.detail.delete")}
-          textClassName="text-red-400!"
-          className="bg-red-500/10!"
+          className="bg-transparent!"
           onClick={handleDelete}
         />
       </div>

@@ -8,13 +8,26 @@ import { useTodo } from "@hooks/useToDo";
 import { ToDoForm } from "@molecules/toDo/toDoForm";
 import { ToDoList } from "@molecules/toDo/toDoList";
 import { ToDoFilter } from "@molecules/toDo/toDoFilter";
-import { useMemo } from "react";
-import RefreshIcon from "@icons/Refresh";
+import { useMemo, useRef, createContext, useContext } from "react";
 import PlusIcon from "@icons/Plus";
+import SearchIcon from "@icons/SearchIcon";
+import { Confetti, ConfettiHandle } from "@atoms/Confetti";
 
 const CREATE_LIST_VALUE = "createList";
 
+// Context to share confetti trigger with child components
+const ConfettiContext = createContext<((x?: number, y?: number) => void) | null>(
+  null,
+);
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useConfetti = () => {
+  const context = useContext(ConfettiContext);
+  return context;
+};
+
 export const ToDo = () => {
+  const confettiRef = useRef<ConfettiHandle>(null);
   const { t } = useTranslation();
   const {
     toDoSettings,
@@ -60,44 +73,51 @@ export const ToDo = () => {
 
   if (!toDoSettings.enabled || !toDoSettings.visible) return null;
 
+  const fireConfetti = (x?: number, y?: number) =>
+    confettiRef.current?.fire(x, y);
+
   return (
-    <WidgetWrapper
-      widgetId={WidgetId.TODO}
-      innerGlassClassName="flex flex-col gap-4 min-w-[20rem] max-w-[25rem] max-h-[40rem]"
-    >
-      <div className="flex flex-col gap-2">
-        <Dropdown
-          value={selectedList?.id}
-          onChange={onSelectList}
-          onOpenChange={() => setSearchTerm("")}
-          menuClassName="max-w-80"
-          header={
-            <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
-              <RefreshIcon size={16} />
-              <input
-                value={searchTerm}
-                placeholder={t("toDo.list.searchPlaceholder")}
-                className="w-full outline-none text-white font-light text-sz-default"
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <ConfettiContext.Provider value={fireConfetti}>
+      <WidgetWrapper
+        widgetId={WidgetId.TODO}
+        innerGlassClassName="flex flex-col gap-4 min-w-[20rem] max-w-[25rem] max-h-[40rem] relative overflow-visible"
+      >
+        <Confetti ref={confettiRef} />
+
+        <div className="flex flex-col gap-2">
+          <Dropdown
+            value={selectedList?.id}
+            onChange={onSelectList}
+            onOpenChange={() => setSearchTerm("")}
+            menuClassName="max-w-80"
+            header={
+              <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
+                <SearchIcon />
+                <input
+                  value={searchTerm}
+                  placeholder={t("toDo.list.searchPlaceholder")}
+                  className="w-full outline-none text-white font-light text-sz-default"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            }
+            data={listsData}
+          >
+            <div className="inline-flex gap-2 items-center cursor-pointer">
+              <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
+                {selectedList?.title || t("toDo.myDay")}
+              </Typography>
+              <ChevronIcon size={16} />
             </div>
-          }
-          data={listsData}
-        >
-          <div className="inline-flex gap-2 items-center cursor-pointer">
-            <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
-              {selectedList?.title || t("toDo.myDay")}
-            </Typography>
-            <ChevronIcon size={16} />
-          </div>
-        </Dropdown>
+          </Dropdown>
 
-        <ToDoFilter />
-      </div>
+          <ToDoFilter />
+        </div>
 
-      <ToDoList />
+        <ToDoList />
 
-      <ToDoForm />
-    </WidgetWrapper>
+        <ToDoForm />
+      </WidgetWrapper>
+    </ConfettiContext.Provider>
   );
 };

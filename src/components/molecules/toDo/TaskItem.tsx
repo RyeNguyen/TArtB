@@ -6,14 +6,14 @@ import { TaskPriorityType } from "@constants/common";
 import { PRIORITY_COLORS } from "@constants/toDoConfig";
 import { TaskDetail } from "./TaskDetail";
 import { Checkbox } from "@atoms/Checkbox";
-import { Grip } from "../../icons/Grip";
 import { getDeadlineColor } from "@utils/dateUtils";
+import DragListIcon from "@icons/DragList";
 
 interface TaskItemProps {
   task: Task;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, e?: React.MouseEvent) => void;
   formatDeadline: (deadline: number) => string;
   showDragHandle?: boolean;
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
@@ -41,7 +41,7 @@ export const TaskItem = ({
             {...dragHandleProps}
             className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity touch-none"
           >
-            <Grip size={14} className="text-white/70" />
+            <DragListIcon />
           </div>
         )}
 
@@ -51,7 +51,7 @@ export const TaskItem = ({
             borderColor={
               PRIORITY_COLORS[task.priority ?? TaskPriorityType.NONE].color
             }
-            onClick={() => onToggle(task.id)}
+            onClick={(e) => onToggle(task.id, e)}
           />
 
           <PopoverTrigger className="flex-1 min-w-0">

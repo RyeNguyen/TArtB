@@ -6,7 +6,7 @@ interface CheckboxProps {
   borderColor?: string;
   iconSize?: number;
   iconColor?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   className?: string;
 }
 

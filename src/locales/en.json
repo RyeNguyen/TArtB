@@ -143,7 +143,8 @@
     "detail": {
       "addTitle": "Add title...",
       "addDescription": "Add description...",
-      "delete": "Delete task"
+      "delete": "Delete task",
+      "moveTo": "Move to"
     },
     "toast": {
       "taskAdded": "Task added",
