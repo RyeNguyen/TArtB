@@ -42,89 +42,133 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
   const [isUpgradingToHD, setIsUpgradingToHD] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Progressive loading: Start with small image, upgrade to HD
+  // Progressive loading: Preload new image, then crossfade
   useEffect(() => {
-    const init = () => {
-      // Fade out before switching to new artwork
-      setIsTransitioning(true);
+    const init = async () => {
+      console.group('🖼️ Progressive Image Loading');
 
-      // Short delay for fade-out effect
-      setTimeout(() => {
-        // Generate small image URL from HD URL (works for all museums)
-        const smallImageUrl = generateSmallImageUrl(imageUrl);
+      // Generate small image URL from HD URL (works for all museums)
+      const smallImageUrl = generateSmallImageUrl(imageUrl);
 
-        // Only use progressive loading if we successfully generated a different small URL
-        if (smallImageUrl !== imageUrl) {
-          console.group('🖼️ Progressive Image Loading');
-          console.log('Small URL:', smallImageUrl);
-          console.log('HD URL:', imageUrl);
-          console.log('Default URL:', getDefaultUrl(imageUrl));
+      console.log('Small URL:', smallImageUrl);
+      console.log('HD URL:', imageUrl);
+      console.log('Default URL:', getDefaultUrl(imageUrl));
+
+      // Step 1: Preload small image in background (keep current artwork visible)
+      const smallImage = new Image();
+      smallImage.crossOrigin = 'anonymous';
+
+      const loadSmallImage = new Promise<void>((resolve, reject) => {
+        smallImage.onload = () => {
+          console.log('✓ Small image preloaded');
+          resolve();
+        };
+        smallImage.onerror = () => {
+          console.warn('⚠️ Small image failed to load');
+          reject();
+        };
+        smallImage.src = smallImageUrl !== imageUrl ? smallImageUrl : imageUrl;
+      });
+
+      try {
+        // Wait for small image to load
+        await loadSmallImage;
+
+        // Step 2: Fade out current artwork
+        setIsTransitioning(true);
+
+        // Step 3: Wait for fade-out, then show new artwork
+        setTimeout(() => {
+          setCurrentImageUrl(smallImageUrl !== imageUrl ? smallImageUrl : imageUrl);
+          setFallbackLevel(smallImageUrl !== imageUrl ? 1 : 0);
+          setIsUpgradingToHD(false);
+          setIsTransitioning(false); // Fade in immediately
+
           console.groupEnd();
 
-          setCurrentImageUrl(smallImageUrl);
-          setFallbackLevel(1); // Start at "small" level
-          setIsUpgradingToHD(false);
+          // Step 4: Upgrade to HD in background (if applicable)
+          if (smallImageUrl !== imageUrl) {
+            const hdImage = new Image();
+            hdImage.crossOrigin = 'anonymous';
 
-        // Preload HD image in background
-        const hdImage = new Image();
-        hdImage.crossOrigin = 'anonymous';
+            hdImage.onload = () => {
+              console.log('✨ HD image loaded, upgrading...');
+              setIsUpgradingToHD(true);
+              setTimeout(() => {
+                setCurrentImageUrl(imageUrl);
+                setFallbackLevel(0);
+                setIsUpgradingToHD(false);
+              }, 100);
+            };
 
-        hdImage.onload = () => {
-          console.log('✨ Progressive load: HD image loaded successfully');
-          setIsUpgradingToHD(true);
-          // Small delay to ensure smooth transition
+            hdImage.onerror = () => {
+              console.warn('⚠️ HD failed, trying base image...');
+              const defaultUrl = getDefaultUrl(imageUrl);
+
+              if (defaultUrl !== imageUrl && defaultUrl !== smallImageUrl) {
+                const defaultImage = new Image();
+                defaultImage.crossOrigin = 'anonymous';
+
+                defaultImage.onload = () => {
+                  console.log('✅ Base image loaded');
+                  setCurrentImageUrl(defaultUrl);
+                  setFallbackLevel(2);
+                };
+
+                defaultImage.onerror = () => {
+                  console.error('❌ Base image failed, staying with small');
+                };
+
+                defaultImage.src = defaultUrl;
+              }
+            };
+
+            hdImage.src = imageUrl;
+          }
+        }, 300); // Fade-out duration
+      } catch (error) {
+        // If preload fails, skip optimization and load base image directly
+        console.warn('⚠️ Preload failed, loading base image directly:', error);
+
+        // Try base URL first
+        const defaultUrl = getDefaultUrl(imageUrl);
+        const fallbackUrl = defaultUrl !== imageUrl ? defaultUrl : imageUrl;
+
+        // Preload the fallback URL
+        const fallbackImage = new Image();
+        fallbackImage.crossOrigin = 'anonymous';
+
+        fallbackImage.onload = () => {
+          console.log('✅ Base image preloaded, showing now');
+
+          // Fade out
+          setIsTransitioning(true);
+
+          setTimeout(() => {
+            setCurrentImageUrl(fallbackUrl);
+            setFallbackLevel(2);
+            setIsUpgradingToHD(false);
+            setIsTransitioning(false); // Fade in
+            console.groupEnd();
+          }, 300);
+        };
+
+        fallbackImage.onerror = () => {
+          // If everything fails, show HD URL anyway (last resort)
+          console.error('❌ All preloads failed, showing HD URL anyway');
+
+          setIsTransitioning(true);
           setTimeout(() => {
             setCurrentImageUrl(imageUrl);
             setFallbackLevel(0);
             setIsUpgradingToHD(false);
-            setIsTransitioning(false); // Fade in
-          }, 100);
+            setIsTransitioning(false);
+            console.groupEnd();
+          }, 300);
         };
 
-        hdImage.onerror = (e) => {
-          console.warn('⚠️ Progressive load: HD failed to load');
-          console.warn('  Failed URL:', imageUrl);
-          console.warn('  Error:', e);
-          setIsUpgradingToHD(false);
-
-          // Try to load base image (no size suffix) instead of staying with tiny image
-          const defaultUrl = getDefaultUrl(imageUrl);
-          console.log('  Attempting fallback to base URL:', defaultUrl);
-
-          if (defaultUrl !== imageUrl && defaultUrl !== smallImageUrl) {
-            // Preload the default URL before switching
-            const defaultImage = new Image();
-            defaultImage.crossOrigin = 'anonymous';
-
-            defaultImage.onload = () => {
-              console.log('✅ Fallback to base image successful');
-              setCurrentImageUrl(defaultUrl);
-              setFallbackLevel(2);
-              setIsTransitioning(false); // Fade in
-            };
-
-            defaultImage.onerror = () => {
-              console.error('❌ Base image also failed, staying with small image');
-              setIsTransitioning(false); // Fade in even with small image
-            };
-
-            defaultImage.src = defaultUrl;
-          } else {
-            console.warn('  No fallback available, staying with small image');
-          }
-        };
-
-        hdImage.src = imageUrl;
-        } else {
-          // Couldn't generate small version, load HD directly
-          console.log('🖼️ Loading HD image directly (no size transformation available)');
-          setCurrentImageUrl(imageUrl);
-          setFallbackLevel(0);
-          setIsUpgradingToHD(false);
-          // Fade in after a brief moment
-          setTimeout(() => setIsTransitioning(false), 100);
-        }
-      }, 300); // 300ms fade-out duration
+        fallbackImage.src = fallbackUrl;
+      }
     };
 
     init();
@@ -200,7 +244,7 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
       image.removeEventListener('load', handleImageLoad);
       image.removeEventListener('error', handleImageError);
     };
-  }, [currentImageUrl, fallbackLevel, currentArtwork]);
+  }, [currentImageUrl, fallbackLevel, currentArtwork, imageUrl]);
 
   return (
     <>
@@ -275,7 +319,7 @@ class Cell {
     this.vx = 0;
     this.vy = 0;
     this.ease = 0.08; // Lower = slower recovery to original position
-    this.friction = 0.92; // Higher = less velocity decay, longer effect
+    this.friction = 0.90; // Higher = less velocity decay, longer effect
     this.col = col;
     this.row = row;
     this.movement = 0;
@@ -286,16 +330,19 @@ class Cell {
     const srcX = this.col * this.effect.spriteWidth;
     const srcY = this.row * this.effect.spriteHeight;
 
+    // Add 1px overlap to eliminate gaps between cells caused by fractional pixels
+    const overlap = 1;
+
     context.drawImage(
       this.image,
       srcX + this.slideX,
       srcY + this.slideY,
-      this.effect.spriteWidth,
-      this.effect.spriteHeight,
+      this.effect.spriteWidth + overlap,
+      this.effect.spriteHeight + overlap,
       this.x,
       this.y,
-      this.width,
-      this.height,
+      this.width + overlap,
+      this.height + overlap,
     );
   }
 
@@ -313,7 +360,7 @@ class Cell {
 
       // Force based on mouse speed and distance
       // Higher speed = stronger force, closer distance = stronger effect
-      const forceMagnitude = mouseSpeed * distanceFactor * 2.5; // 5.0 is sensitivity
+      const forceMagnitude = mouseSpeed * distanceFactor * 1.5; // 5.0 is sensitivity
 
       // Apply force in the direction the mouse is moving (drag effect)
       // Normalize mouse velocity and apply force
@@ -374,7 +421,7 @@ class Effect {
     this.ctx = canvas.getContext('2d');
 
     // Reduced grid size for better performance (40x40 = 1,600 cells vs 100x100 = 10,000)
-    this.gridSize = 40;
+    this.gridSize = 60;
 
     // Initialize contain mode properties
     this.imageX = 0;
@@ -395,7 +442,7 @@ class Effect {
       prevY: 0,
       vx: 0,
       vy: 0,
-      radius: 75,
+      radius: 100,
     };
 
     // Performance tracking

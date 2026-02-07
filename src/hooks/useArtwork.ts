@@ -1,11 +1,11 @@
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { useSettingsStore } from '../stores/settingsStore';
-import { useArtworkStore } from '../stores/artworkStore';
-import { fetchRandomArtworkFromFirestore } from '../services/firebase/firestoreService';
-import { fetchRandomArtwork as fetchFromArtic } from '../services/api/artInstituteApi';
-import { fetchRandomArtwork as fetchFromMet } from '../services/api/metMuseumApi';
-import { fetchRandomArtwork as fetchFromWikiArt } from '../services/api/wikiArtApi';
-import { Artwork } from '../types/artwork';
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useArtworkStore } from "../stores/artworkStore";
+import { fetchRandomArtworkFromFirestore } from "../services/firebase/firestoreService";
+import { fetchRandomArtwork as fetchFromArtic } from "../services/api/artInstituteApi";
+import { fetchRandomArtwork as fetchFromMet } from "../services/api/metMuseumApi";
+import { fetchRandomArtwork as fetchFromWikiArt } from "../services/api/wikiArtApi";
+import { Artwork } from "../types/artwork";
 
 export const useArtwork = () => {
   const { settings } = useSettingsStore();
@@ -30,41 +30,46 @@ export const useArtwork = () => {
 
   const fetchArtwork = async (): Promise<Artwork> => {
     let museum = settings.artwork.museum;
+    const mood = settings.artwork.filterByMood
+      ? settings.artwork.mood
+      : undefined;
 
-    console.log(`Fetching artwork (museum: ${museum})...`);
+    console.log(
+      `Fetching artwork (museum: ${museum}, mood: ${mood || "any"})...`,
+    );
 
     try {
-      console.log('Attempting to fetch from Firestore...');
-      const artwork = await fetchRandomArtworkFromFirestore(museum);
+      const artwork = await fetchRandomArtworkFromFirestore(museum, mood);
 
       setCurrentArtwork(artwork);
       updateLastFetchTime(Date.now());
 
       return artwork;
     } catch (firestoreError) {
-      console.warn('Firestore fetch failed, falling back to direct API calls:', firestoreError);
+      console.warn(
+        "Firestore fetch failed, falling back to direct API calls:",
+        firestoreError,
+      );
 
-      // FALLBACK: If Firestore fails, use direct API calls
-      // This ensures the extension still works even if Firebase is down
-
-      // If random, pick one randomly from all three
-      if (museum === 'random') {
-        const museums: ('artic' | 'met' | 'wikiart')[] = ['artic', 'met', 'wikiart'];
+      if (museum === "random") {
+        const museums: ("artic" | "met" | "wikiart")[] = [
+          "artic",
+          "met",
+          "wikiart",
+        ];
         museum = museums[Math.floor(Math.random() * museums.length)];
       }
 
       try {
-        // Fetch from the selected museum API
         let artwork: Artwork;
-        if (museum === 'artic') {
+        if (museum === "artic") {
           artwork = await fetchFromArtic();
-        } else if (museum === 'met') {
+        } else if (museum === "met") {
           artwork = await fetchFromMet();
         } else {
           artwork = await fetchFromWikiArt();
         }
 
-        // Update the artwork store
         setCurrentArtwork(artwork);
         updateLastFetchTime(Date.now());
 
@@ -72,27 +77,29 @@ export const useArtwork = () => {
       } catch (apiError) {
         console.error(`API fetch also failed for ${museum}:`, apiError);
 
-        // Try other museums as last resort
-        if (museum !== 'met') {
+        if (museum !== "met") {
           try {
-            console.log('Last resort: trying Met Museum...');
+            console.log("Last resort: trying Met Museum...");
             const artwork = await fetchFromMet();
             setCurrentArtwork(artwork);
             updateLastFetchTime(Date.now());
             return artwork;
           } catch (metError) {
-            console.error('Met Museum fallback failed:', metError);
+            console.error("Met Museum fallback failed:", metError);
           }
         }
 
-        // If everything fails, throw error
-        throw new Error('Failed to fetch artwork from all sources');
+        throw new Error("Failed to fetch artwork from all sources");
       }
     }
   };
 
   const query = useQuery({
-    queryKey: ['artwork', settings.artwork.museum, settings.artwork.changeInterval],
+    queryKey: [
+      "artwork",
+      settings.artwork.museum,
+      settings.artwork.changeInterval,
+    ],
     queryFn: fetchArtwork,
     enabled: shouldRefetch(),
     staleTime: settings.artwork.changeInterval * 60 * 1000,
@@ -107,7 +114,11 @@ export const useArtwork = () => {
   }
 
   if (query.error) {
-    setError(query.error instanceof Error ? query.error.message : 'Failed to fetch artwork');
+    setError(
+      query.error instanceof Error
+        ? query.error.message
+        : "Failed to fetch artwork",
+    );
   } else if (useArtworkStore.getState().error !== null) {
     setError(null);
   }

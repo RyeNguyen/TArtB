@@ -31,3 +31,6 @@ dist-ssr
 # Firebase
 functions/lib
 functions/node_modules
+
+# Firebase Admin SDK Service Account (NEVER COMMIT!)
+serviceAccountKey.json
