@@ -145,7 +145,7 @@ function groupByDueDate(tasks: Task[], t: TranslateFunction): TaskGroup[] {
 
 /**
  * Group tasks by tags
- * Tasks with multiple tags appear in multiple groups
+ * Tasks are grouped by their first tag only
  * Tasks without tags go to "No Tags" group
  */
 function groupByTags(
@@ -162,12 +162,12 @@ function groupByTags(
     if (!task.tags || task.tags.length === 0) {
       noTagTasks.push(task);
     } else {
-      for (const tagId of task.tags) {
-        if (!tasksByTag.has(tagId)) {
-          tasksByTag.set(tagId, []);
-        }
-        tasksByTag.get(tagId)!.push(task);
+      // Use only the first tag for grouping
+      const firstTagId = task.tags[0];
+      if (!tasksByTag.has(firstTagId)) {
+        tasksByTag.set(firstTagId, []);
       }
+      tasksByTag.get(firstTagId)!.push(task);
     }
   }
 
@@ -180,7 +180,7 @@ function groupByTags(
         label: `#${tag.title}`,
         tasks: tagTasks,
         groupValue: tagId,
-        isDroppable: true, // Can drop to add tag to task
+        isDroppable: true, // Can drop to set as first tag
         color: tag.color,
       });
     }

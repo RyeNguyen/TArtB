@@ -3,11 +3,13 @@ import React, { ReactNode, useState } from "react";
 interface GlassProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
 }
 
 export const Glass = ({
   children,
   className = "",
+  contentClassName = "",
   style,
   ...props
 }: GlassProps) => {
@@ -50,7 +52,7 @@ export const Glass = ({
           background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(255,255,255,0.15) 0%, transparent 50%)`,
         }}
       />
-      <div className="relative z-0">{children}</div>
+      <div className={`relative z-0 ${contentClassName}`}>{children}</div>
     </div>
   );
 };

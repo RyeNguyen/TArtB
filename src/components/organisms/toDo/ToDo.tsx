@@ -5,8 +5,8 @@ import { TypoVariants, WidgetId } from "@constants/common";
 import ChevronIcon from "@icons/Chevron";
 import { useTranslation } from "react-i18next";
 import { useTodo } from "@hooks/useToDo";
-import { ToDoForm } from "@molecules/toDo/toDoForm";
-import { ToDoList } from "@molecules/toDo/toDoList";
+import { ToDoForm } from "@organisms/toDo/toDoForm";
+import { ToDoList } from "@organisms/toDo/toDoList";
 import { ToDoFilter } from "@molecules/toDo/toDoFilter";
 import { useMemo, useRef, createContext, useContext } from "react";
 import PlusIcon from "@icons/Plus";
@@ -16,9 +16,9 @@ import { Confetti, ConfettiHandle } from "@atoms/Confetti";
 const CREATE_LIST_VALUE = "createList";
 
 // Context to share confetti trigger with child components
-const ConfettiContext = createContext<((x?: number, y?: number) => void) | null>(
-  null,
-);
+const ConfettiContext = createContext<
+  ((x?: number, y?: number) => void) | null
+>(null);
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useConfetti = () => {

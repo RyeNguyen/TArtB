@@ -23,11 +23,11 @@ import { Task } from "@/types/toDo";
 import { useTodo, TaskGroup } from "@hooks/useToDo";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
-import { SortableTaskItem } from "./SortableTaskItem";
+import { SortableTaskItem } from "../../molecules/toDo/SortableTaskItem";
 import { Typography } from "@atoms/Typography";
 import { TypoVariants } from "@constants/common";
 import { shortDateFormatMap } from "@constants/toDoConfig";
-import { useConfetti } from "@organisms/ToDo";
+import { useConfetti } from "@organisms/toDo/ToDo";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -137,13 +137,11 @@ export const ToDoList = () => {
 
   const handleToggleWithConfetti = useCallback(
     (taskId: string, e?: React.MouseEvent) => {
-      // Find the task to check if marking as completed
       const task = groupedTasks
         .flatMap((g) => g.tasks)
         .find((t) => t.id === taskId);
 
       if (task && !task.isCompleted && e) {
-        // Fire confetti from click position
         fireConfetti?.(e.clientX, e.clientY);
       }
 

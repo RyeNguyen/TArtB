@@ -10,7 +10,7 @@ import { useSettingsStore } from "@stores/settingsStore";
 import { useAuthStore } from "@stores/authStore";
 import { useTranslation } from "react-i18next";
 import { DockStation } from "@molecules/DockStation";
-import { ToDo } from "@organisms/ToDo";
+import { ToDo } from "@organisms/toDo/ToDo";
 import { UserProfile } from "@atoms/UserProfile";
 import { ToastContainer } from "@atoms/Toast";
 

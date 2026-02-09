@@ -3,6 +3,8 @@ import { Tag, Task, TaskList } from "@/types/toDo";
 import { todoService } from "@services/todo/todoService";
 import { TaskPriorityType } from "@constants/common";
 import { generateId } from "@utils/stringUtils";
+import { removeUndefined } from "@utils/objectUtils";
+import i18next from "i18next";
 
 interface TodoLoadingState {
   isAddingTask: boolean;
@@ -10,6 +12,7 @@ interface TodoLoadingState {
   isTogglingTask: boolean;
   isReorderingTask: boolean;
   isDeletingTask: boolean;
+  isDuplicatingTask: boolean;
   isAddingList: boolean;
   isUpdatingList: boolean;
   isDeletingList: boolean;
@@ -59,6 +62,7 @@ interface TodoStore {
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  duplicateTask: (id: string) => Promise<void>;
   toggleTask: (id: string) => Promise<void>;
   reorderTask: (id: string, newOrder: number) => Promise<void>;
   reorderTaskInGroup: (
@@ -75,6 +79,21 @@ interface TodoStore {
   addTag: (title: string, color?: string) => Promise<string>;
   searchTag: (searchTerm: string) => Promise<Tag[]>;
   deleteTag: (id: string) => Promise<void>;
+
+  // Subtask actions
+  addSubtask: (taskId: string, title: string) => Promise<string>;
+  toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
+  updateSubtask: (
+    taskId: string,
+    subtaskId: string,
+    updates: Partial<Omit<import("@/types/toDo").Subtask, "id" | "createdAt">>,
+  ) => Promise<void>;
+  deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
+  reorderSubtask: (
+    taskId: string,
+    subtaskId: string,
+    newOrder: number,
+  ) => Promise<void>;
 
   // Bulk actions
   clearCompleted: (listId: string) => Promise<void>;
@@ -100,6 +119,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     isTogglingTask: false,
     isReorderingTask: false,
     isDeletingTask: false,
+    isDuplicatingTask: false,
     isAddingList: false,
     isUpdatingList: false,
     isDeletingList: false,
@@ -397,6 +417,55 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     }
   },
 
+  duplicateTask: async (id) => {
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
+
+    setLoading("isDuplicatingTask", true);
+
+    try {
+      const originalTask = tasks.find((t) => t.id === id);
+      if (!originalTask) {
+        throw new Error("Task not found");
+      }
+
+      const now = Date.now();
+      const duplicatedTask: Task = {
+        ...originalTask,
+        id: generateId(),
+        title: `${i18next.t("toDo.copyOf")} ${originalTask.title}`,
+        isCompleted: false,
+        completedAt: undefined,
+        order: originalTask.order + 0.5, // Insert right after original
+        createdAt: now,
+        updatedAt: now,
+        // Deep-copy subtasks with new IDs, reset completion
+        subtasks: originalTask.subtasks?.map((s) => ({
+          ...s,
+          id: generateId(),
+          createdAt: now,
+          updatedAt: now,
+          completedAt: undefined,
+          isCompleted: false,
+        })),
+      };
+
+      // Insert duplicated task right after the original
+      const originalIndex = tasks.findIndex((t) => t.id === id);
+      const newTasks = [...tasks];
+      newTasks.splice(originalIndex + 1, 0, duplicatedTask);
+
+      set({ tasks: newTasks });
+      await todoService.duplicateTask(id, duplicatedTask);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error duplicating task:", error);
+      throw error;
+    } finally {
+      setLoading("isDuplicatingTask", false);
+    }
+  },
+
   toggleTask: async (id) => {
     const { tasks, setLoading } = get();
     const previousTasks = tasks;
@@ -636,6 +705,201 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     } catch (error) {
       set({ tags: previousTags });
       console.error("[TodoStore] Error deleting tag:", error);
+      throw error;
+    }
+  },
+
+  // Subtask actions
+  addSubtask: async (taskId, title) => {
+    const { tasks } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) throw new Error("Task not found");
+
+    try {
+      const now = Date.now();
+      const subtasks = task.subtasks || [];
+      const maxOrder =
+        subtasks.length > 0 ? Math.max(...subtasks.map((s) => s.order)) : -1;
+
+      const newSubtask = {
+        id: generateId(),
+        title,
+        isCompleted: false,
+        order: maxOrder + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const updatedSubtasks = [...subtasks, newSubtask];
+
+      // Clean undefined values from subtasks for Firestore
+      const cleanedSubtasks = updatedSubtasks.map(s => removeUndefined(s));
+
+      set({
+        tasks: tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, subtasks: updatedSubtasks, updatedAt: now }
+            : t,
+        ),
+      });
+
+      await todoService.updateTaskFields(taskId, {
+        subtasks: cleanedSubtasks,
+        updatedAt: now,
+      });
+
+      return newSubtask.id;
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error adding subtask:", error);
+      throw error;
+    }
+  },
+
+  toggleSubtask: async (taskId, subtaskId) => {
+    const { tasks } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.subtasks) return;
+
+    try {
+      const now = Date.now();
+
+      // Toggle the subtask
+      const updatedSubtasks = task.subtasks.map((s) =>
+        s.id === subtaskId
+          ? {
+              ...s,
+              isCompleted: !s.isCompleted,
+              completedAt: !s.isCompleted ? now : undefined,
+              updatedAt: now,
+            }
+          : s,
+      );
+
+      // Clean undefined values from subtasks for Firestore
+      const cleanedSubtasks = updatedSubtasks.map(s => removeUndefined(s));
+
+      // Update task with new subtasks (no auto-completion of parent)
+      const taskUpdates: Partial<Task> = {
+        subtasks: updatedSubtasks,
+        updatedAt: now,
+      };
+
+      set({
+        tasks: tasks.map((t) => (t.id === taskId ? { ...t, ...taskUpdates } : t)),
+      });
+
+      await todoService.updateTaskFields(taskId, {
+        subtasks: cleanedSubtasks,
+        updatedAt: now,
+      });
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error toggling subtask:", error);
+      throw error;
+    }
+  },
+
+  updateSubtask: async (taskId, subtaskId, updates) => {
+    const { tasks } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.subtasks) return;
+
+    try {
+      const now = Date.now();
+
+      const updatedSubtasks = task.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, ...updates, updatedAt: now } : s,
+      );
+
+      // Clean undefined values from subtasks for Firestore
+      const cleanedSubtasks = updatedSubtasks.map(s => removeUndefined(s));
+
+      set({
+        tasks: tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, subtasks: updatedSubtasks, updatedAt: now }
+            : t,
+        ),
+      });
+
+      await todoService.updateTaskFields(taskId, {
+        subtasks: cleanedSubtasks,
+        updatedAt: now,
+      });
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error updating subtask:", error);
+      throw error;
+    }
+  },
+
+  deleteSubtask: async (taskId, subtaskId) => {
+    const { tasks } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.subtasks) return;
+
+    try {
+      const now = Date.now();
+      const updatedSubtasks = task.subtasks.filter((s) => s.id !== subtaskId);
+
+      // Clean undefined values from subtasks for Firestore
+      const cleanedSubtasks = updatedSubtasks.map(s => removeUndefined(s));
+
+      set({
+        tasks: tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, subtasks: updatedSubtasks, updatedAt: now }
+            : t,
+        ),
+      });
+
+      await todoService.updateTaskFields(taskId, {
+        subtasks: cleanedSubtasks,
+        updatedAt: now,
+      });
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error deleting subtask:", error);
+      throw error;
+    }
+  },
+
+  reorderSubtask: async (taskId, subtaskId, newOrder) => {
+    const { tasks } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !task.subtasks) return;
+
+    try {
+      const now = Date.now();
+
+      const updatedSubtasks = task.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, order: newOrder, updatedAt: now } : s,
+      );
+
+      // Clean undefined values from subtasks for Firestore
+      const cleanedSubtasks = updatedSubtasks.map(s => removeUndefined(s));
+
+      set({
+        tasks: tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, subtasks: updatedSubtasks, updatedAt: now }
+            : t,
+        ),
+      });
+
+      await todoService.updateTaskFields(taskId, {
+        subtasks: cleanedSubtasks,
+        updatedAt: now,
+      });
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error reordering subtask:", error);
       throw error;
     }
   },

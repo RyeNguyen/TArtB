@@ -56,6 +56,7 @@
       "none": "Không"
     },
     "inputPlaceholder": "Bạn muốn làm gì?",
+    "copyOf": "Bản sao của",
     "sortBy": {
       "date": "Ngày tạo",
       "dueDate": "Hạn chót",
@@ -92,7 +93,23 @@
       "addTitle": "Thêm tiêu đề...",
       "addDescription": "Thêm mô tả...",
       "delete": "Xóa công việc",
-      "moveTo": "Di chuyển đến"
+      "moveTo": "Di chuyển đến",
+      "deleteConfirm": {
+        "title": "Xóa công việc",
+        "message": "Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác.",
+        "confirm": "Xóa",
+        "cancel": "Hủy"
+      }
+    },
+    "action": {
+      "duplicate": "Tạo bản sao",
+      "delete": "Xoá công việc"
+    },
+    "subtask": {
+      "add": "Thêm công việc con",
+      "placeholder": "Tiêu đề công việc con...",
+      "empty": "Chưa có công việc con",
+      "progress": "{{completed}} trên {{total}} hoàn thành"
     },
     "toast": {
       "taskAdded": "Đã thêm công việc",
@@ -112,6 +129,14 @@
       "errorUpdatingList": "Không thể cập nhật danh sách",
       "errorDeletingList": "Không thể xóa danh sách",
       "errorClearingCompleted": "Không thể xóa các công việc đã hoàn thành",
+      "subtaskAdded": "Đã thêm công việc con",
+      "subtaskCompleted": "Đã hoàn thành công việc con",
+      "subtaskUncompleted": "Đã bỏ hoàn thành công việc con",
+      "subtaskDeleted": "Đã xóa công việc con",
+      "errorAddingSubtask": "Không thể thêm công việc con",
+      "errorTogglingSubtask": "Không thể chuyển trạng thái công việc con",
+      "errorDeletingSubtask": "Không thể xóa công việc con",
+      "errorUpdatingSubtask": "Không thể cập nhật công việc con",
       "retry": "Thử lại"
     }
   },
