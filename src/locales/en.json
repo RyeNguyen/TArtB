@@ -119,8 +119,8 @@
       "delete": "Delete task"
     },
     "subtask": {
-      "add": "Add subtask",
-      "placeholder": "Subtask title...",
+      "title": "Sub-tasks",
+      "placeholder": "Create sub-task",
       "empty": "No subtasks yet",
       "progress": "{{completed}} of {{total}} completed"
     },

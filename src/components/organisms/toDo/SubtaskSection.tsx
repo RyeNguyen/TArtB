@@ -132,7 +132,9 @@ export const SubtaskSection = ({ taskId, subtasks }: SubtaskSectionProps) => {
       )}
 
       <div className="flex items-center gap-2">
-        <Typography className="font-bold!">Sub-tasks</Typography>
+        <Typography className="font-bold!">
+          {t("toDo.subtask.title")}
+        </Typography>
 
         {havingSubtasks && (
           <div className="flex items-center gap-1 px-2 rounded-full bg-white/20 text-sz-small text-white/80">

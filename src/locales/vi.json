@@ -106,8 +106,8 @@
       "delete": "Xoá công việc"
     },
     "subtask": {
-      "add": "Thêm công việc con",
-      "placeholder": "Tiêu đề công việc con...",
+      "title": "Công việc con",
+      "placeholder": "Tạo công việc con",
       "empty": "Chưa có công việc con",
       "progress": "{{completed}} trên {{total}} hoàn thành"
     },

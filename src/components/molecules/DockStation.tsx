@@ -76,7 +76,7 @@ export const DockStation = ({
   className,
   onOpenSettings,
 }: DockStationProps) => {
-  const { settings, toggleWidgetVisible, focusWidget } = useSettingsStore();
+  const { settings, toggleWidgetVisible, focusWidget, enterFocusMode } = useSettingsStore();
 
   // Filter to only dock widgets that exist in registry AND are enabled
   const enabledWidgets = Object.entries(WIDGET_REGISTRY)
@@ -88,12 +88,38 @@ export const DockStation = ({
   }
 
   const handleIconClick = (widgetId: WidgetId) => {
-    const isVisible = settings.widgets[widgetId].visible;
-    if (isVisible) {
+    const widget = settings.widgets[widgetId];
+    const isFocused = widget.focused;
+    const isVisible = widget.visible;
+
+    // Check if another widget is currently in focus mode
+    const focusedWidget = settings.focusedWidget;
+    const anotherWidgetIsFocused = focusedWidget && focusedWidget !== widgetId;
+
+    if (isFocused && isVisible) {
+      // Clicking the currently focused widget - minimize it (keep focused state)
       toggleWidgetVisible(widgetId);
+    } else if (anotherWidgetIsFocused) {
+      // Another widget is in focus mode - switch to this widget in focus mode
+      if (!isVisible) {
+        // If this widget is minimized, restore it first
+        toggleWidgetVisible(widgetId);
+      }
+      // Switch focus to this widget (will unfocus the other)
+      enterFocusMode(widgetId);
+    } else if (!isVisible) {
+      // Widget is minimized, no other widget focused - restore to previous state
+      toggleWidgetVisible(widgetId);
+      if (isFocused) {
+        // Was in focus mode before minimizing, restore focus mode
+        enterFocusMode(widgetId);
+      } else {
+        // Was in normal mode, just bring to front
+        focusWidget(widgetId);
+      }
     } else {
+      // Widget is visible but not focused, no other widget focused - just minimize
       toggleWidgetVisible(widgetId);
-      focusWidget(widgetId);
     }
   };
 
@@ -103,7 +129,8 @@ export const DockStation = ({
 
   return (
     <Glass
-      className={`z-40 fixed! bottom-4 left-1/2 -translate-x-1/2 px-2 py-1 ${className}`}
+      className={`fixed! bottom-4 left-1/2 -translate-x-1/2 px-2 py-1 ${className}`}
+      style={{ zIndex: 70 }}
     >
       <div className="flex gap-1 items-center">
         {enabledWidgets.map(([id, widget]) => (

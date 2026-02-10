@@ -27,8 +27,10 @@ interface TodoStore {
   isLoaded: boolean;
   isSyncing: boolean;
   hasInitializedDefaultList: boolean;
+  selectedTaskId: string | null;
   loading: TodoLoadingState;
   setLoading: (key: keyof TodoLoadingState, value: boolean) => void;
+  setSelectedTask: (taskId: string | null) => void;
 
   // Initialization & Sync
   loadData: () => Promise<void>;
@@ -113,6 +115,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   isLoaded: false,
   isSyncing: false,
   hasInitializedDefaultList: false,
+  selectedTaskId: null,
   loading: {
     isAddingTask: false,
     isUpdatingTask: false,
@@ -128,6 +131,10 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
   setLoading: (key, value) => {
     set({ loading: { ...get().loading, [key]: value } });
+  },
+
+  setSelectedTask: (taskId) => {
+    set({ selectedTaskId: taskId });
   },
 
   loadData: async () => {

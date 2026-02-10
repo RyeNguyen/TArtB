@@ -3,11 +3,9 @@ import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import {
   UserSettings,
   DEFAULT_SETTINGS,
-  LegacyUserSettings,
   WidgetPosition,
 } from "../types/settings";
 import { WidgetId } from "@constants/common";
-import { ClockType, Language, TimeFormat } from "@constants/common";
 
 interface SettingsStore {
   settings: UserSettings;
@@ -26,6 +24,9 @@ interface SettingsStore {
   // Position and focus actions
   updateWidgetPosition: (widgetId: WidgetId, position: WidgetPosition) => void;
   focusWidget: (widgetId: WidgetId) => void;
+  // Focus mode actions
+  enterFocusMode: (widgetId: WidgetId) => void;
+  exitFocusMode: () => void;
 }
 
 // Helper to safely check Chrome extension environment
@@ -123,44 +124,6 @@ const deepMerge = <T extends Record<string, unknown>>(
   return result;
 };
 
-// Check if settings are in legacy flat format
-const isLegacySettings = (state: any): state is { settings: LegacyUserSettings } => {
-  return state?.settings && "showClock" in state.settings;
-};
-
-// Migrate from legacy flat structure to new grouped structure
-const migrateSettings = (legacy: LegacyUserSettings): UserSettings => {
-  return {
-    widgets: {
-      [WidgetId.CLOCK]: {
-        enabled: legacy.showClock ?? true,
-        visible: true,
-        type: legacy.clockType ?? ClockType.DIGITAL,
-        timeFormat: legacy.timeFormat ?? TimeFormat.H12,
-      },
-      [WidgetId.DATE]: {
-        enabled: legacy.showDate ?? true,
-        visible: true,
-      },
-      [WidgetId.GREETING]: {
-        enabled: legacy.showGreeting ?? true,
-        visible: true,
-      },
-      [WidgetId.ARTWORK_INFO]: {
-        enabled: legacy.showArtworkInfo ?? true,
-        visible: true,
-      },
-    },
-    artwork: {
-      museum: legacy.artMuseum ?? "wikiart",
-      changeInterval: legacy.artChangeInterval ?? 30,
-    },
-    app: {
-      language: legacy.language ?? Language.EN,
-    },
-  };
-};
-
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
@@ -202,7 +165,9 @@ export const useSettingsStore = create<SettingsStore>()(
                 ...state.settings.widgets[widgetId],
                 enabled,
                 // When enabling, also make visible
-                visible: enabled ? true : state.settings.widgets[widgetId].visible,
+                visible: enabled
+                  ? true
+                  : state.settings.widgets[widgetId].visible,
               },
             },
           },
@@ -272,31 +237,83 @@ export const useSettingsStore = create<SettingsStore>()(
       // Focus widget (bring to front)
       focusWidget: (widgetId: WidgetId) =>
         set((state) => {
-          const newFocusOrder = state.focusOrder.filter((id) => id !== widgetId);
+          const newFocusOrder = state.focusOrder.filter(
+            (id) => id !== widgetId,
+          );
           newFocusOrder.push(widgetId);
           return {
             focusedWidgetId: widgetId,
             focusOrder: newFocusOrder,
           };
         }),
+
+      // Enter focus mode (expand widget to full screen)
+      enterFocusMode: (widgetId: WidgetId) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            widgets: {
+              [WidgetId.CLOCK]: {
+                ...state.settings.widgets[WidgetId.CLOCK],
+                focused: widgetId === WidgetId.CLOCK,
+              },
+              [WidgetId.DATE]: {
+                ...state.settings.widgets[WidgetId.DATE],
+                focused: widgetId === WidgetId.DATE,
+              },
+              [WidgetId.GREETING]: {
+                ...state.settings.widgets[WidgetId.GREETING],
+                focused: widgetId === WidgetId.GREETING,
+              },
+              [WidgetId.ARTWORK_INFO]: {
+                ...state.settings.widgets[WidgetId.ARTWORK_INFO],
+                focused: widgetId === WidgetId.ARTWORK_INFO,
+              },
+              [WidgetId.TODO]: {
+                ...state.settings.widgets[WidgetId.TODO],
+                focused: widgetId === WidgetId.TODO,
+              },
+            },
+            focusedWidget: widgetId,
+          },
+        })),
+
+      // Exit focus mode (return to normal view)
+      exitFocusMode: () =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            widgets: {
+              [WidgetId.CLOCK]: {
+                ...state.settings.widgets[WidgetId.CLOCK],
+                focused: false,
+              },
+              [WidgetId.DATE]: {
+                ...state.settings.widgets[WidgetId.DATE],
+                focused: false,
+              },
+              [WidgetId.GREETING]: {
+                ...state.settings.widgets[WidgetId.GREETING],
+                focused: false,
+              },
+              [WidgetId.ARTWORK_INFO]: {
+                ...state.settings.widgets[WidgetId.ARTWORK_INFO],
+                focused: false,
+              },
+              [WidgetId.TODO]: {
+                ...state.settings.widgets[WidgetId.TODO],
+                focused: false,
+              },
+            },
+            focusedWidget: null,
+          },
+        })),
     }),
     {
       name: "tartb-settings",
-      version: 1,
       storage: createJSONStorage(() => chromeStorage),
       // Only persist settings, not transient UI state
       partialize: (state) => ({ settings: state.settings }),
-      migrate: (persistedState: unknown, version: number) => {
-        // Migration from version 0 (legacy flat structure) to version 1 (grouped)
-        if (version === 0 && isLegacySettings(persistedState)) {
-          console.log("Migrating settings from legacy format...");
-          return {
-            settings: migrateSettings(persistedState.settings),
-            // settings: () => {},
-          };
-        }
-        return persistedState as { settings: UserSettings };
-      },
     },
   ),
 );

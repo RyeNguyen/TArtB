@@ -28,6 +28,7 @@ import { Typography } from "@atoms/Typography";
 import { TypoVariants } from "@constants/common";
 import { shortDateFormatMap } from "@constants/toDoConfig";
 import { useConfetti } from "@organisms/toDo/ToDo";
+import { useTodoStore } from "@stores/todoStore";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -78,9 +79,14 @@ const DroppableGroup = ({
   );
 };
 
-export const ToDoList = () => {
+interface ToDoListProps {
+  isFocusMode?: boolean;
+}
+
+export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
   const { t, i18n } = useTranslation();
   const { groupedTasks, handleToggleTask, handleReorderTask } = useTodo();
+  const { selectedTaskId, setSelectedTask } = useTodoStore();
   const fireConfetti = useConfetti();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [_, setActiveTask] = useState<Task | null>(null);
@@ -299,11 +305,14 @@ export const ToDoList = () => {
                 key={task.id}
                 task={task}
                 groupId={group.id}
-                isOpen={openTaskId === task.id}
+                isOpen={isFocusMode ? false : openTaskId === task.id}
                 onOpenChange={(open) => handleOpenChange(task.id, open)}
                 onToggle={handleToggleWithConfetti}
                 formatDeadline={formatDeadline}
                 disableSortAnimation={isCrossGroupDrag}
+                isFocusMode={isFocusMode}
+                onTaskClick={setSelectedTask}
+                isSelected={isFocusMode && selectedTaskId === task.id}
               />
             ))}
           </DroppableGroup>

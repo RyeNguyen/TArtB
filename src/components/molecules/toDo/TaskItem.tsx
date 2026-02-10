@@ -17,6 +17,9 @@ interface TaskItemProps {
   formatDeadline: (deadline: number) => string;
   showDragHandle?: boolean;
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  isFocusMode?: boolean;
+  onTaskClick?: (taskId: string) => void;
+  isSelected?: boolean;
 }
 
 export const TaskItem = ({
@@ -27,6 +30,9 @@ export const TaskItem = ({
   formatDeadline,
   showDragHandle = false,
   dragHandleProps,
+  isFocusMode = false,
+  onTaskClick,
+  isSelected = false,
 }: TaskItemProps) => {
   const deadlineDate = useMemo(
     () => (task.deadline ? new Date(task.deadline) : undefined),
@@ -38,70 +44,97 @@ export const TaskItem = ({
     : 0;
   const havingSubtasks = task.subtasks && task.subtasks.length > 0;
 
-  return (
-    <Popover open={isOpen} onOpenChange={onOpenChange}>
-      <div className="flex items-center justify-between gap-2 p-2 pr-2 rounded-2xl group hover:bg-white/20">
-        {showDragHandle && (
-          <div
-            {...dragHandleProps}
-            className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity touch-none"
-          >
-            <DragListIcon />
-          </div>
-        )}
+  const handleTaskClick = () => {
+    if (isFocusMode && onTaskClick) {
+      onTaskClick(task.id);
+    }
+  };
 
-        <div className="flex flex-1 flex-col gap-3 min-w-0">
-          <div className="flex flex-1">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Checkbox
-                checked={task.isCompleted}
-                borderColor={
-                  PRIORITY_COLORS[task.priority ?? TaskPriorityType.NONE].color
-                }
-                onClick={(e) => onToggle(task.id, e)}
-              />
+  const taskContent = (
+    <div
+      className={`flex items-center justify-between gap-2 p-2 pr-2 rounded-2xl group hover:bg-white/20 ${
+        isSelected ? "bg-white/20" : ""
+      } ${isFocusMode ? "cursor-pointer" : ""}`}
+      onClick={isFocusMode ? handleTaskClick : undefined}
+    >
+      {showDragHandle && (
+        <div
+          {...dragHandleProps}
+          className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity touch-none"
+        >
+          <DragListIcon />
+        </div>
+      )}
 
+      <div className="flex flex-1 flex-col gap-3 min-w-0">
+        <div className="flex flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Checkbox
+              checked={task.isCompleted}
+              borderColor={
+                PRIORITY_COLORS[task.priority ?? TaskPriorityType.NONE].color
+              }
+              onClick={(e) => onToggle(task.id, e)}
+            />
+
+            {isFocusMode ? (
+              <Typography
+                className={`truncate flex-1 ${task.isCompleted ? "line-through opacity-50" : ""}`}
+              >
+                {task.title}
+              </Typography>
+            ) : (
               <PopoverTrigger className="flex-1 min-w-0">
                 <Typography
-                  className={`truncate ${task.isCompleted ? "line-through opacity-50" : ""}`}
+                  className={`truncate flex-1 ${task.isCompleted ? "line-through opacity-50" : ""}`}
                 >
                   {task.title}
                 </Typography>
               </PopoverTrigger>
-            </div>
-
-            {task.deadline && (
-              <Typography style={{ color: getDeadlineColor(deadlineDate) }}>
-                {formatDeadline(task.deadline)}
-              </Typography>
             )}
           </div>
 
-          {havingSubtasks && (
-            <div className="flex items-center gap-1">
-              {Array.from({ length: completedSubtasksAmount }, (_, index) => (
-                <div
-                  key={index}
-                  className={`flex-1 h-1 rounded-full bg-primary-300`}
-                />
-              ))}
-              {Array.from(
-                {
-                  length:
-                    (task.subtasks?.length ?? 0) - completedSubtasksAmount,
-                },
-                (_, index) => (
-                  <div
-                    key={index}
-                    className={`flex-1 h-1 rounded-full bg-white/20`}
-                  />
-                ),
-              )}
-            </div>
+          {task.deadline && (
+            <Typography style={{ color: getDeadlineColor(deadlineDate) }}>
+              {formatDeadline(task.deadline)}
+            </Typography>
           )}
         </div>
-      </div>
 
+        {havingSubtasks && (
+          <div className="flex items-center gap-1">
+            {Array.from({ length: completedSubtasksAmount }, (_, index) => (
+              <div
+                key={index}
+                className={`flex-1 h-1 rounded-full bg-primary-300`}
+              />
+            ))}
+            {Array.from(
+              {
+                length: (task.subtasks?.length ?? 0) - completedSubtasksAmount,
+              },
+              (_, index) => (
+                <div
+                  key={index}
+                  className={`flex-1 h-1 rounded-full bg-white/20`}
+                />
+              ),
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // In focus mode, return task content without popover
+  if (isFocusMode) {
+    return taskContent;
+  }
+
+  // In compact mode, wrap with popover
+  return (
+    <Popover open={isOpen} onOpenChange={onOpenChange}>
+      {taskContent}
       <PopoverContent className="p-3">
         <TaskDetail task={task} onClose={() => onOpenChange(false)} />
       </PopoverContent>
