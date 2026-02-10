@@ -34,12 +34,10 @@ export const useTodo = () => {
     addTask,
     addList,
     toggleTask,
-    addTag,
     searchTag,
     getTasksByList,
     reorderTaskInGroup,
     normalizeTaskOrders,
-    moveTaskToList,
   } = useTodoStore();
 
   const toDoSettings = settings.widgets[WidgetId.TODO];
@@ -402,7 +400,6 @@ export const useTodo = () => {
     searchTagsResults,
 
     // Actions
-    addTag,
     searchTag,
     getDisplayTags,
     searchList,
@@ -413,6 +410,5 @@ export const useTodo = () => {
     handleAddTask,
     handleToggleTask,
     handleReorderTask,
-    moveTaskToList,
   };
 };

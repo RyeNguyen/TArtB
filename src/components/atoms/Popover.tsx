@@ -39,6 +39,7 @@ export const Popover = ({
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
     onOpenChange: setIsOpen,
+    strategy: "fixed",
     middleware: [
       autoPlacement(),
       offset(offsetValue),
@@ -49,7 +50,9 @@ export const Popover = ({
   });
 
   const click = useClick(context);
-  const dismiss = useDismiss(context);
+  const dismiss = useDismiss(context, {
+    ancestorScroll: true,
+  });
 
   const { getReferenceProps, getFloatingProps } = useInteractions([
     click,

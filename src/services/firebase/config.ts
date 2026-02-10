@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -14,17 +18,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
-
-// Enable offline persistence for local-first architecture
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === "failed-precondition") {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time
-    console.warn("Firestore persistence failed: multiple tabs open");
-  } else if (err.code === "unimplemented") {
-    // Browser doesn't support persistence
-    console.warn("Firestore persistence not supported in this browser");
-  }
+// Initialize Firestore with offline persistence and multi-tab support
+// This enables local-first architecture: all operations work offline and sync when online
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
 });
 
 // Initialize Auth

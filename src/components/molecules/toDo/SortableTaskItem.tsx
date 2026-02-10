@@ -11,6 +11,9 @@ interface SortableTaskItemProps {
   formatDeadline: (deadline: number) => string;
   groupId: string;
   disableSortAnimation?: boolean;
+  isFocusMode?: boolean;
+  onTaskClick?: (taskId: string) => void;
+  isSelected?: boolean;
 }
 
 export const SortableTaskItem = ({
@@ -21,6 +24,9 @@ export const SortableTaskItem = ({
   formatDeadline,
   groupId,
   disableSortAnimation = false,
+  isFocusMode,
+  onTaskClick,
+  isSelected,
 }: SortableTaskItemProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useSortable({
@@ -50,6 +56,9 @@ export const SortableTaskItem = ({
         formatDeadline={formatDeadline}
         showDragHandle={true}
         dragHandleProps={listeners}
+        isFocusMode={isFocusMode}
+        onTaskClick={onTaskClick}
+        isSelected={isSelected}
       />
     </div>
   );

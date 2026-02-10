@@ -1,7 +1,5 @@
 import { Button } from "@atoms/button/Button";
 import { DatePicker } from "@atoms/DatePicker";
-import { Dropdown } from "@atoms/Dropdown";
-import { Typography } from "@atoms/Typography";
 import { COLORS } from "@constants/colors";
 import { TaskPriorityType } from "@constants/common";
 
@@ -15,7 +13,9 @@ import { useTranslation } from "react-i18next";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
 import { useMemo } from "react";
-import SearchIcon from "@icons/SearchIcon";
+import { useTodoStore } from "@stores/todoStore";
+import { PrioritySelector } from "@molecules/toDo/PrioritySelector";
+import { TagSelector } from "@molecules/toDo/TagSelector";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 const CREATE_TAG_VALUE = "createTag";
@@ -23,6 +23,7 @@ const CREATE_TAG_VALUE = "createTag";
 export const ToDoForm = () => {
   const { t, i18n } = useTranslation();
   const priorityConfig = getPriorityConfig();
+  const { addTag } = useTodoStore();
   const {
     tags,
     priority,
@@ -32,100 +33,16 @@ export const ToDoForm = () => {
     inputValue,
     setInputValue,
     setIsInputFocused,
-    searchTagsResults,
     tagSearchTerm,
     setTagSearchTerm,
     selectedTags,
     handleSelectTag,
     loading,
-
     handleAddTask,
     handleBlur,
-    addTag,
   } = useTodo();
 
   const isAdding = loading.isAddingTask;
-
-  const priorityData = [
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.ERROR_400} />
-          <Typography className="text-white">
-            {t("toDo.priority.high")}
-          </Typography>
-        </div>
-      ),
-      value: TaskPriorityType.HIGH,
-    },
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.WARNING_400} />
-          <Typography className="text-white">
-            {t("toDo.priority.medium")}
-          </Typography>
-        </div>
-      ),
-      value: TaskPriorityType.MEDIUM,
-    },
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.BLUE_400} />
-          <Typography className="text-white">
-            {t("toDo.priority.low")}
-          </Typography>
-        </div>
-      ),
-      value: TaskPriorityType.LOW,
-    },
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FlagIcon />
-          <Typography className="text-white">
-            {t("toDo.priority.none")}
-          </Typography>
-        </div>
-      ),
-      value: TaskPriorityType.NONE,
-    },
-  ];
-
-  const tagsData = useMemo(() => {
-    return searchTagsResults.length > 0
-      ? searchTagsResults.map((item) => {
-          return {
-            value: item.id,
-            label: (
-              <div
-                className={`rounded-full border px-2 ${selectedTags.includes(item.id) ? "border-transparent" : "border-white"}`}
-              >
-                <Typography
-                  className={`${selectedTags.includes(item.id) ? "text-gray-300!" : "text-text-white"}`}
-                >
-                  #{item.title}
-                </Typography>
-              </div>
-            ),
-            color: item.color,
-          };
-        })
-      : [
-          {
-            label: (
-              <div className="w-full flex items-center gap-1">
-                <PlusIcon />
-                <Typography className="truncate flex-1">
-                  {t("toDo.tag.createNew", { tagName: tagSearchTerm })}
-                </Typography>
-              </div>
-            ),
-            value: CREATE_TAG_VALUE,
-          },
-        ];
-  }, [searchTagsResults, selectedTags, t, tagSearchTerm]);
 
   const firstTag = useMemo(
     () => tags.find((item) => item.id === selectedTags[0]),
@@ -178,7 +95,7 @@ export const ToDoForm = () => {
         />
 
         {/* {isInputFocused && ( */}
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2">
           <DatePicker value={deadline} onChange={setDeadline}>
             <Button
               type="button"
@@ -189,10 +106,8 @@ export const ToDoForm = () => {
             />
           </DatePicker>
 
-          <Dropdown
-            data={priorityData}
+          <PrioritySelector
             value={priority}
-            header={t("toDo.priority.title")}
             onChange={(value: string) => setPriority(value as TaskPriorityType)}
           >
             <Button
@@ -203,39 +118,18 @@ export const ToDoForm = () => {
               textClassName="text-gray-300!"
               style={{ backgroundColor: priorityConfig[priority].bgColor }}
             />
-          </Dropdown>
+          </PrioritySelector>
 
-          <Dropdown
-            data={tagsData}
-            value={selectedTags}
-            multipleSelect
-            isCompact
-            className="flex-1"
-            menuClassName="max-w-80"
-            menuItemClassName="p-0!"
-            onChange={onSelectTag}
-            onOpenChange={() => setTagSearchTerm("")}
-            header={
-              <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
-                <SearchIcon />
-                <input
-                  value={tagSearchTerm}
-                  placeholder={t("toDo.tag.searchPlaceholder")}
-                  className="w-full outline-none text-white font-light text-sz-default"
-                  onChange={(e) => setTagSearchTerm(e.target.value)}
-                />
-              </div>
-            }
-          >
+          <TagSelector value={selectedTags} onChange={onSelectTag}>
             <Button
               type="button"
-              className="flex-1 overflow-hidden"
-              textClassName="flex-1 truncate text-gray-300!"
+              className="flex-1 min-w-0 overflow-hidden"
+              textClassName="truncate text-gray-300!"
               icon={displayTag !== t("toDo.tag.none") ? undefined : TagIcon}
               text={displayTag}
               style={{ backgroundColor: firstTag?.color }}
             />
-          </Dropdown>
+          </TagSelector>
         </div>
         {/* )} */}
       </div>

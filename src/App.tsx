@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import SettingIcon from "@icons/Setting";
 import { ArtworkInfo } from "@molecules/ArtworkInfo";
 import { InteractiveArtwork } from "./components/organisms/InteractiveArtwork";
@@ -10,19 +11,24 @@ import { useSettingsStore } from "@stores/settingsStore";
 import { useAuthStore } from "@stores/authStore";
 import { useTranslation } from "react-i18next";
 import { DockStation } from "@molecules/DockStation";
-import { ToDo } from "@organisms/ToDo";
+import { ToDo } from "@organisms/toDo/ToDo";
 import { UserProfile } from "@atoms/UserProfile";
 import { ToastContainer } from "@atoms/Toast";
 
 function App() {
   const { i18n } = useTranslation();
   const { artwork } = useArtwork();
-  const { settings } = useSettingsStore();
+  const { settings, exitFocusMode } = useSettingsStore();
   const { initialize: initializeAuth } = useAuthStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [initialSettingsCategory, setInitialSettingsCategory] = useState<
     string | undefined
   >();
+
+  // Check if any widget is in focus mode AND visible
+  const focusedWidget = settings.focusedWidget;
+  const isAnyWidgetFocused =
+    focusedWidget !== null && settings.widgets[focusedWidget]?.visible;
 
   useEffect(() => {
     const unsubscribe = initializeAuth();
@@ -81,6 +87,21 @@ function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black">
       {artwork?.imageUrl && <InteractiveArtwork imageUrl={artwork.imageUrl} />}
+
+      {/* Shared backdrop for focus mode - stays visible when switching widgets */}
+      <AnimatePresence>
+        {isAnyWidgetFocused && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: 59 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={exitFocusMode}
+          />
+        )}
+      </AnimatePresence>
 
       <ArtworkInfo />
 

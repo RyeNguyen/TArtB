@@ -36,6 +36,7 @@ export interface TodoService {
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ): Promise<void>;
   deleteTaskById(id: string): Promise<void>;
+  duplicateTask(id: string, newTask: Task): Promise<void>;
 
   // Granular Tag operations
   saveTag(tag: Tag): Promise<void>;
@@ -185,6 +186,21 @@ class LocalTodoService implements TodoService {
   async deleteTaskById(id: string): Promise<void> {
     if (!this.cache) await this.load();
     this.cache!.tasks = this.cache!.tasks.filter((t) => t.id !== id);
+    await this.save(this.cache!);
+  }
+
+  async duplicateTask(id: string, newTask: Task): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const originalIndex = this.cache!.tasks.findIndex((t) => t.id === id);
+    if (originalIndex >= 0) {
+      // Insert the duplicated task right after the original
+      this.cache!.tasks.splice(originalIndex + 1, 0, newTask);
+    } else {
+      // If original not found, just add at the end
+      this.cache!.tasks.push(newTask);
+    }
+
     await this.save(this.cache!);
   }
 
@@ -507,6 +523,18 @@ class FirestoreTodoService implements TodoService {
     }
   }
 
+  async duplicateTask(id: string, newTask: Task): Promise<void> {
+    try {
+      const { id: newId, ...data } = newTask;
+      await setDoc(doc(this.tasksRef, newId), removeUndefined(data), {
+        merge: true,
+      });
+    } catch (error) {
+      console.error("Error duplicating task in Firestore:", error);
+      throw error;
+    }
+  }
+
   // === Granular Tag operations ===
   async saveTag(tag: Tag): Promise<void> {
     try {
@@ -699,6 +727,11 @@ class HybridTodoService implements TodoService {
   async deleteTaskById(id: string): Promise<void> {
     await this.localService.deleteTaskById(id);
     this.syncToCloud(() => this.firestoreService!.deleteTaskById(id));
+  }
+
+  async duplicateTask(id: string, newTask: Task): Promise<void> {
+    await this.localService.duplicateTask(id, newTask);
+    this.syncToCloud(() => this.firestoreService!.duplicateTask(id, newTask));
   }
 
   // === Granular Tag operations ===

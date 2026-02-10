@@ -72,7 +72,9 @@ export const Dropdown = ({
                   key={item.value}
                   className={menuItemClassName}
                   isActive={isActive}
-                  onClick={() => handleChange(item.value)}
+                  onClick={
+                    item.onClick ? item.onClick : () => handleChange(item.value)
+                  }
                   data={item}
                 />
               );
@@ -115,8 +117,8 @@ export const DropdownItem = ({
       className={`
         p-2 cursor-pointer rounded-xl
         transition-colors duration-150
-        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-white/20"}
-        ${isActive && "bg-white/40"}
+        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-white/20!"}
+        ${isActive ? "bg-white/40" : ""}
         ${className}
       `}
       style={{

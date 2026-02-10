@@ -17,6 +17,7 @@ export interface WidgetPosition {
 interface BaseWidgetState {
   enabled: boolean;
   visible: boolean;
+  focused: boolean;
   position?: WidgetPosition;
 }
 
@@ -61,6 +62,7 @@ export interface UserSettings {
   widgets: WidgetStates;
   artwork: ArtworkSettings;
   app: AppSettings;
+  focusedWidget: WidgetId | null;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -68,24 +70,29 @@ export const DEFAULT_SETTINGS: UserSettings = {
     [WidgetId.CLOCK]: {
       enabled: true,
       visible: true,
+      focused: false,
       type: ClockType.DIGITAL,
       timeFormat: TimeFormat.H12,
     },
     [WidgetId.DATE]: {
       enabled: true,
       visible: true,
+      focused: false,
     },
     [WidgetId.GREETING]: {
       enabled: false,
       visible: false,
+      focused: false,
     },
     [WidgetId.ARTWORK_INFO]: {
       enabled: true,
       visible: true,
+      focused: false,
     },
     [WidgetId.TODO]: {
       enabled: false,
       visible: true,
+      focused: false,
       selectedListId: null,
       sortBy: TaskSortBy.MANUAL,
       groupBy: TaskGroupBy.NONE,
@@ -100,6 +107,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   app: {
     language: Language.EN,
   },
+  focusedWidget: null,
 };
 
 export type SettingField = {

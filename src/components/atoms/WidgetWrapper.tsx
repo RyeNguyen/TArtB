@@ -51,11 +51,14 @@ export const WidgetWrapper = ({
     closeWidget,
     updateWidgetPosition,
     focusWidget,
+    enterFocusMode,
+    exitFocusMode,
   } = useSettingsStore();
 
   const widgetMeta = WIDGET_REGISTRY[widgetId];
   const widgetName = widgetMeta ? String(t(widgetMeta.name as any)) : "";
   const buttonsRef = useRef<HTMLDivElement>(null);
+  const isFocused = settings.widgets[widgetId]?.focused || false;
 
   const [buttonsWidth, setButtonsWidth] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -134,6 +137,18 @@ export const WidgetWrapper = ({
     };
   }, [clampToViewport]);
 
+  // ESC key to exit focus mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFocused) {
+        exitFocusMode();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFocused, exitFocusMode]);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isDragging) return;
 
@@ -159,6 +174,7 @@ export const WidgetWrapper = ({
       onMinimize();
     } else {
       minimizeWidget(widgetId);
+      // Note: Don't exit focus mode here - preserve focused state when minimizing
     }
   };
 
@@ -168,6 +184,15 @@ export const WidgetWrapper = ({
       onClose();
     } else {
       closeWidget(widgetId);
+    }
+  };
+
+  const handleFocus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isFocused) {
+      exitFocusMode();
+    } else {
+      enterFocusMode(widgetId);
     }
   };
 
@@ -223,7 +248,7 @@ export const WidgetWrapper = ({
     <motion.div
       ref={wrapperRef}
       className={`fixed ${wrapperClassName}`}
-      drag
+      drag={!isFocused}
       dragControls={dragControls}
       dragListener={false}
       dragMomentum={false}
@@ -235,30 +260,48 @@ export const WidgetWrapper = ({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{
-        perspective: isDragging ? "none" : 800,
-        left: position.x,
-        top: position.y,
-        rotateX: isDragging ? 0 : rotateX,
-        rotateY: isDragging ? 0 : rotateY,
-        zIndex,
-        x: dragX,
-        y: dragY,
-        transformStyle: isDragging ? "flat" : "preserve-3d",
-        willChange: isDragging ? "auto" : "transform",
-        backfaceVisibility: "hidden",
+        zIndex: isFocused ? 60 : zIndex,
+        ...(isFocused
+          ? {
+              left: "50%",
+              top: "46%",
+              width: "95vw",
+              height: "85vh",
+              backfaceVisibility: "hidden",
+            }
+          : {
+              perspective: isDragging ? "none" : 800,
+              left: position.x,
+              top: position.y,
+              rotateX: isDragging ? 0 : rotateX,
+              rotateY: isDragging ? 0 : rotateY,
+              x: dragX,
+              y: dragY,
+              transformStyle: isDragging ? "flat" : "preserve-3d",
+              willChange: isDragging ? "auto" : "transform",
+              backfaceVisibility: "hidden",
+            }),
       }}
+      initial={false}
       animate={{
-        rotateX: isDragging ? 0 : tilt.rotateX,
-        rotateY: isDragging ? 0 : tilt.rotateY,
+        x: isFocused ? "-50%" : 0,
+        y: isFocused ? "-50%" : 0,
+        scale: isFocused ? 1 : 1,
+        opacity: isFocused ? 1 : 1,
+        rotateX: isDragging || isFocused ? 0 : tilt.rotateX,
+        rotateY: isDragging || isFocused ? 0 : tilt.rotateY,
       }}
       transition={{
-        type: "spring",
-        stiffness: 600,
-        damping: 30,
+        x: { duration: 0 }, // Instant position change
+        y: { duration: 0 }, // Instant position change
+        scale: { duration: 0.2, ease: "easeOut" },
+        opacity: { duration: 0.15 },
+        rotateX: { type: "spring", stiffness: 600, damping: 30 },
+        rotateY: { type: "spring", stiffness: 600, damping: 30 },
       }}
     >
       <Glass
-        className={`px-2 py-2 flex flex-col overflow-hidden gap-0.5`}
+        className={`flex flex-col gap-0.5 ${isFocused ? "h-full" : "overflow-hidden"}`}
         style={{
           transform: "translateZ(0)",
           WebkitFontSmoothing: "antialiased",
@@ -267,7 +310,7 @@ export const WidgetWrapper = ({
       >
         {/* Widget Header - Drag Handle */}
         <motion.div
-          className="flex items-center justify-between gap-2 z-10 cursor-grab active:cursor-grabbing"
+          className="flex px-4 pt-2 items-center justify-between gap-2 z-10 cursor-grab active:cursor-grabbing"
           initial={{ opacity: 0 }}
           animate={{ opacity: isHovered ? 1 : 0 }}
           transition={{ duration: 0.2 }}
@@ -281,6 +324,10 @@ export const WidgetWrapper = ({
           )}
           <div ref={buttonsRef} className="flex items-center gap-2">
             <div
+              onClick={handleFocus}
+              className="w-3.5 h-3.5 rounded-full bg-green-500 hover:bg-white/60 transition-colors cursor-pointer"
+            />
+            <div
               onClick={handleMinimize}
               className="w-3.5 h-3.5 rounded-full bg-amber-400 hover:bg-white/60 transition-colors cursor-pointer"
             />
@@ -293,8 +340,14 @@ export const WidgetWrapper = ({
 
         {/* Widget Body */}
         <div
-          className={`rounded-2xl bg-transparent px-2 py-1 overflow-hidden ${innerGlassClassName}`}
-          onWheel={(e) => e.stopPropagation()}
+          className={`rounded-2xl px-4 py-3 bg-transparent ${isFocused ? "flex-1 min-h-0" : "overflow-hidden"} ${innerGlassClassName}`}
+          onWheel={(e) => {
+            // Only stop propagation in normal mode
+            // In focus mode, allow scrolling to work
+            if (!isFocused) {
+              e.stopPropagation();
+            }
+          }}
         >
           {children}
         </div>

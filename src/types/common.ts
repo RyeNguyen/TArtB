@@ -10,4 +10,5 @@ export interface ItemProps {
   value: string;
   label: ReactNode;
   color?: string;
+  onClick?: () => void;
 }

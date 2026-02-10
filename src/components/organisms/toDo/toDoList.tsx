@@ -23,11 +23,12 @@ import { Task } from "@/types/toDo";
 import { useTodo, TaskGroup } from "@hooks/useToDo";
 import { isToday, isTomorrow, format, type Locale } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
-import { SortableTaskItem } from "./SortableTaskItem";
+import { SortableTaskItem } from "../../molecules/toDo/SortableTaskItem";
 import { Typography } from "@atoms/Typography";
 import { TypoVariants } from "@constants/common";
 import { shortDateFormatMap } from "@constants/toDoConfig";
-import { useConfetti } from "@organisms/ToDo";
+import { useConfetti } from "@organisms/toDo/ToDo";
+import { useTodoStore } from "@stores/todoStore";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -78,9 +79,14 @@ const DroppableGroup = ({
   );
 };
 
-export const ToDoList = () => {
+interface ToDoListProps {
+  isFocusMode?: boolean;
+}
+
+export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
   const { t, i18n } = useTranslation();
   const { groupedTasks, handleToggleTask, handleReorderTask } = useTodo();
+  const { selectedTaskId, setSelectedTask } = useTodoStore();
   const fireConfetti = useConfetti();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [_, setActiveTask] = useState<Task | null>(null);
@@ -137,13 +143,11 @@ export const ToDoList = () => {
 
   const handleToggleWithConfetti = useCallback(
     (taskId: string, e?: React.MouseEvent) => {
-      // Find the task to check if marking as completed
       const task = groupedTasks
         .flatMap((g) => g.tasks)
         .find((t) => t.id === taskId);
 
       if (task && !task.isCompleted && e) {
-        // Fire confetti from click position
         fireConfetti?.(e.clientX, e.clientY);
       }
 
@@ -301,11 +305,14 @@ export const ToDoList = () => {
                 key={task.id}
                 task={task}
                 groupId={group.id}
-                isOpen={openTaskId === task.id}
+                isOpen={isFocusMode ? false : openTaskId === task.id}
                 onOpenChange={(open) => handleOpenChange(task.id, open)}
                 onToggle={handleToggleWithConfetti}
                 formatDeadline={formatDeadline}
                 disableSortAnimation={isCrossGroupDrag}
+                isFocusMode={isFocusMode}
+                onTaskClick={setSelectedTask}
+                isSelected={isFocusMode && selectedTaskId === task.id}
               />
             ))}
           </DroppableGroup>

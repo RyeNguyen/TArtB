@@ -1,0 +1,96 @@
+import { Dropdown } from "@atoms/Dropdown";
+import { Typography } from "@atoms/Typography";
+import { TypoVariants } from "@constants/common";
+import { useTodo } from "@hooks/useToDo";
+import ChevronIcon from "@icons/Chevron";
+import PlusIcon from "@icons/Plus";
+import SearchIcon from "@icons/SearchIcon";
+import { ToDoFilter } from "@molecules/toDo/toDoFilter";
+import { ToDoForm } from "@organisms/toDo/toDoForm";
+import { ToDoList } from "@organisms/toDo/toDoList";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+const CREATE_LIST_VALUE = "createList";
+
+export const ToDoCompactMode = () => {
+  const { t } = useTranslation();
+  const {
+    setSearchTerm,
+    searchTerm,
+    searchResults,
+    selectedList,
+    handleAddList,
+    handleSelectList,
+  } = useTodo();
+
+  const listsData = useMemo(() => {
+    return searchResults.length > 0
+      ? searchResults.map((item) => {
+          return {
+            value: item.id,
+            label: item.title,
+          };
+        })
+      : [
+          {
+            label: (
+              <div className="w-full flex items-center gap-1">
+                <PlusIcon />
+                <Typography className="truncate flex-1">
+                  {t("toDo.list.createNew", { listName: searchTerm })}
+                </Typography>
+              </div>
+            ),
+            value: CREATE_LIST_VALUE,
+          },
+        ];
+  }, [searchResults, t, searchTerm]);
+
+  const onSelectList = (listId: string) => {
+    if (!listId) return;
+    if (listId === CREATE_LIST_VALUE) {
+      handleAddList();
+    } else {
+      handleSelectList(listId);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4 min-w-[20rem] max-w-100 max-h-160 relative overflow-visible">
+      <div className="flex flex-col gap-2">
+        <Dropdown
+          value={selectedList?.id}
+          onChange={onSelectList}
+          onOpenChange={() => setSearchTerm("")}
+          menuClassName="max-w-80"
+          header={
+            <div className="w-full flex gap-2 items-center mb-2 pb-2 border-b border-white/20">
+              <SearchIcon />
+              <input
+                value={searchTerm}
+                placeholder={t("toDo.list.searchPlaceholder")}
+                className="w-full outline-none text-white font-light text-sz-default"
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          }
+          data={listsData}
+        >
+          <div className="inline-flex gap-2 items-center cursor-pointer">
+            <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
+              {selectedList?.title || t("toDo.myDay")}
+            </Typography>
+            <ChevronIcon size={16} />
+          </div>
+        </Dropdown>
+
+        <ToDoFilter />
+      </div>
+
+      <ToDoList />
+
+      <ToDoForm />
+    </div>
+  );
+};

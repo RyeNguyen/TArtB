@@ -8,6 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconSize?: number;
   iconColor?: string;
   isOutline?: boolean;
+  isGhost?: boolean;
   text?: string;
   textStyle?: CSSProperties;
   textVariant?: TypoVariants;
@@ -20,6 +21,7 @@ export const Button = ({
   iconSize = 24,
   iconColor = COLORS.GRAY_300,
   isOutline = false,
+  isGhost = false,
   text,
   textStyle,
   textVariant,
@@ -31,14 +33,15 @@ export const Button = ({
     <button
       className={`flex items-center justify-center border gap-2 rounded-2xl cursor-pointer px-2 py-0.5 transition-all duration-200
         hover:scale-105
-        active:scale-95 ${isOutline ? "bg-transparent border-white" : "bg-white border-transparent"} ${className}`}
+        active:scale-95 bg-white border-transparent ${isOutline ? "bg-transparent! border-white!" : ""}
+        ${isGhost ? "bg-transparent! hover:bg-white/40!" : ""} ${className}`}
       {...props}
     >
       {Icon && <Icon size={iconSize} color={iconColor} />}
       {text && (
         <Typography
           variant={textVariant}
-          className={`${isOutline && "text-white!"} ${textClassName}`}
+          className={`${isOutline || isGhost ? "text-white!" : ""} ${textClassName}`}
           style={textStyle}
         >
           {text}

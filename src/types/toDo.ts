@@ -10,6 +10,16 @@ export interface TaskList {
   updatedAt: number;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
+}
+
 export interface Task {
   id: string;
   listId: string;
@@ -23,6 +33,7 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
   completedAt?: number;
+  subtasks?: Subtask[];
 }
 
 export interface Tag {

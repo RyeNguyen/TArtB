@@ -60,68 +60,71 @@ export const DatePicker = ({ children, value, onChange }: DatePickerProps) => {
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger>{children}</PopoverTrigger>
+      <div className="relative inline-flex">
+        <PopoverTrigger>{children}</PopoverTrigger>
 
-      <PopoverContent>
-        <DayPicker
-          mode="single"
-          selected={selected}
-          onSelect={handleSelect}
-          showOutsideDays
-          fixedWeeks
-          components={{
-            Chevron: CustomChevron,
-          }}
-          disabled={{ before: startOfDay(new Date()) }}
-          locale={localeMap[i18n.language] || enUS}
-          modifiersClassNames={{
-            selected: "rounded-2xl bg-white/40 font-semibold",
-            today: "rounded-2xl border border-white/50",
-          }}
-          classNames={{
-            root: "text-white",
-            months: "flex flex-col",
-            month_caption:
-              "flex font-medium uppercase text-white text-[18px] my-1 mx-2",
-            nav: "absolute top-1 right-2 flex items-center gap-1",
-            button_previous: "p-1 hover:bg-white/20 rounded-lg cursor-pointer",
-            button_next: "p-1 hover:bg-white/20 rounded-lg cursor-pointer",
-            month_grid: "w-full border-collapse",
-            weekdays: "flex",
-            weekday:
-              "w-10 text-center text-white text-[18px] font-medium mt-3 mb-1",
-            week: "flex",
-            day: "w-10 h-10 text-center text-[18px] font-light",
-            day_button:
-              "w-full h-full flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors cursor-pointer",
-            outside: "text-white/20",
-            disabled: "text-white/20 cursor-not-allowed hover:bg-transparent",
-          }}
-        />
-        <div className="flex justify-between mt-2">
-          <Button
-            textClassName="text-gray-300!"
-            text={t("toDo.deadline.clear")}
-            isOutline
-            onClick={() => handleQuickSelect(undefined)}
+        <PopoverContent>
+          <DayPicker
+            mode="single"
+            selected={selected}
+            onSelect={handleSelect}
+            showOutsideDays
+            fixedWeeks
+            components={{
+              Chevron: CustomChevron,
+            }}
+            disabled={{ before: startOfDay(new Date()) }}
+            locale={localeMap[i18n.language] || enUS}
+            modifiersClassNames={{
+              selected: "rounded-2xl bg-white/40 font-semibold",
+              today: "rounded-2xl border border-white/50",
+            }}
+            classNames={{
+              root: "text-white",
+              months: "flex flex-col",
+              month_caption:
+                "flex font-medium uppercase text-white text-[18px] my-1 mx-2",
+              nav: "absolute top-1 right-2 flex items-center gap-1",
+              button_previous:
+                "p-1 hover:bg-white/20 rounded-lg cursor-pointer",
+              button_next: "p-1 hover:bg-white/20 rounded-lg cursor-pointer",
+              month_grid: "w-full border-collapse",
+              weekdays: "flex",
+              weekday:
+                "w-10 text-center text-white text-[18px] font-medium mt-3 mb-1",
+              week: "flex",
+              day: "w-10 h-10 text-center text-[18px] font-light",
+              day_button:
+                "w-full h-full flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors cursor-pointer",
+              outside: "text-white/20",
+              disabled: "text-white/20 cursor-not-allowed hover:bg-transparent",
+            }}
           />
+          <div className="flex justify-between mt-2">
+            <Button
+              textClassName="text-gray-300!"
+              text={t("toDo.deadline.clear")}
+              isOutline
+              onClick={() => handleQuickSelect(undefined)}
+            />
 
-          <div className="flex items-center gap-2">
-            <Button
-              textClassName="text-gray-300!"
-              text={t("toDo.deadline.today")}
-              isOutline={!value || !isToday(new Date(value))}
-              onClick={() => handleQuickSelect(today)}
-            />
-            <Button
-              textClassName="text-gray-300!"
-              text={t("toDo.deadline.tomorrow")}
-              isOutline={!value || !isTomorrow(new Date(value))}
-              onClick={() => handleQuickSelect(tomorrow)}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                textClassName="text-gray-300!"
+                text={t("toDo.deadline.today")}
+                isOutline={!value || !isToday(new Date(value))}
+                onClick={() => handleQuickSelect(today)}
+              />
+              <Button
+                textClassName="text-gray-300!"
+                text={t("toDo.deadline.tomorrow")}
+                isOutline={!value || !isTomorrow(new Date(value))}
+                onClick={() => handleQuickSelect(tomorrow)}
+              />
+            </div>
           </div>
-        </div>
-      </PopoverContent>
+        </PopoverContent>
+      </div>
     </Popover>
   );
 };

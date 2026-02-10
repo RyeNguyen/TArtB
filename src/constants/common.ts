@@ -66,3 +66,8 @@ export enum TaskGroupBy {
   DATE = "date",
   DUE_DATE = "dueDate",
 }
+
+export enum OtherTaskActions {
+  DUPLICATE = "duplicate",
+  DELETE = "delete",
+}
