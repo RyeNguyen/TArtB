@@ -1,4 +1,12 @@
-import { ClockType, FieldType, Language, TaskGroupBy, TaskSortBy, TimeFormat, WidgetId } from "@constants/common";
+import {
+  ClockType,
+  FieldType,
+  Language,
+  TaskGroupBy,
+  TaskSortBy,
+  TimeFormat,
+  WidgetId,
+} from "@constants/common";
 import { ParseKeys } from "i18next";
 
 export interface WidgetPosition {
@@ -42,6 +50,8 @@ export interface WidgetStates {
 export interface ArtworkSettings {
   museum: "artic" | "met" | "wikiart" | "random";
   changeInterval: number; // in minutes
+  mood?: string; // Selected mood filter (rainy, sunny, calm, etc.)
+  filterByMood: boolean; // Enable/disable mood filtering
 }
 
 export interface AppSettings {
@@ -81,7 +91,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     },
     [WidgetId.TODO]: {
       enabled: false,
-      visible: false,
+      visible: true,
       focused: false,
       selectedListId: null,
       sortBy: TaskSortBy.MANUAL,
@@ -91,6 +101,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   artwork: {
     museum: "wikiart",
     changeInterval: 30,
+    mood: undefined,
+    filterByMood: false,
   },
   app: {
     language: Language.EN,
@@ -114,4 +126,3 @@ export type SettingCategory = {
   id: string;
   fields: SettingField[];
 };
-

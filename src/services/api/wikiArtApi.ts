@@ -320,8 +320,9 @@ export const fetchRandomArtwork = async (): Promise<Artwork> => {
     console.log('Full painting data:', randomPainting);
 
     // Generate image URLs for progressive loading
-    // Use Large (750x600) for quick load, HD (1920x1200) for best quality
-    const imageUrlSmall = getImageUrl(randomPainting, 'Large');
+    // Use PinterestSmall (~200x200) for instant load, HD (1920x1200) for best quality
+    // Available formats: PinterestSmall, Small, Large, HD
+    const imageUrlSmall = getImageUrl(randomPainting, 'PinterestSmall');
     const imageUrlHD = getImageUrl(randomPainting, 'HD');
 
     console.log('Final URLs - Small:', imageUrlSmall);

@@ -1,5 +1,3 @@
-// API Configuration
-// Load environment variables from .env file (local development)
 import * as dotenv from "dotenv";
 dotenv.config();
 

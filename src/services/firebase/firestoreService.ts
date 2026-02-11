@@ -1,6 +1,7 @@
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from './config';
 import { Artwork } from '../../types/artwork';
+import { calculateMoodMatch } from '@utils/colorUtils';
 
 /**
  * Detect device orientation based on screen dimensions
@@ -14,9 +15,11 @@ const getDeviceOrientation = (): 'landscape' | 'portrait' => {
 /**
  * Fetch a random artwork from Firestore
  * @param museum - Filter by museum ('artic', 'met', 'wikiart', or 'random')
+ * @param mood - Optional mood filter (e.g., 'rainy', 'sunny', 'calm')
  */
 export const fetchRandomArtworkFromFirestore = async (
-  museum: 'artic' | 'met' | 'wikiart' | 'random' = 'random'
+  museum: 'artic' | 'met' | 'wikiart' | 'random' = 'random',
+  mood?: string
 ): Promise<Artwork> => {
   try {
     // Detect device orientation
@@ -67,10 +70,27 @@ export const fetchRandomArtworkFromFirestore = async (
       }
 
       // Convert fallback results
-      const artworks: Artwork[] = [];
+      let artworks: Artwork[] = [];
       fallbackSnapshot.forEach((doc) => {
         artworks.push(doc.data() as Artwork);
       });
+
+      // Filter by mood if specified
+      if (mood && artworks.length > 0) {
+        console.log(`🎨 Filtering fallback artworks by mood: ${mood}`);
+
+        const matchedArtworks = artworks.filter(artwork => {
+          if (!artwork.colors) return false;
+
+          const score = calculateMoodMatch(artwork.colors, mood);
+          return score >= 50; // Match threshold: 50%
+        });
+
+        if (matchedArtworks.length > 0) {
+          console.log(`✅ Found ${matchedArtworks.length} fallback artworks matching mood "${mood}"`);
+          artworks = matchedArtworks;
+        }
+      }
 
       const randomIndex = Math.floor(Math.random() * artworks.length);
       const artwork = artworks[randomIndex];
@@ -79,16 +99,39 @@ export const fetchRandomArtworkFromFirestore = async (
     }
 
     // Convert to array of artworks
-    const artworks: Artwork[] = [];
+    let artworks: Artwork[] = [];
     querySnapshot.forEach((doc) => {
       artworks.push(doc.data() as Artwork);
     });
+
+    // Filter by mood if specified
+    if (mood && artworks.length > 0) {
+      console.log(`🎨 Filtering artworks by mood: ${mood}`);
+
+      const matchedArtworks = artworks.filter(artwork => {
+        if (!artwork.colors) return false;
+
+        const score = calculateMoodMatch(artwork.colors, mood);
+        return score >= 50; // Match threshold: 50%
+      });
+
+      if (matchedArtworks.length === 0) {
+        console.warn(`⚠️ No artworks match mood "${mood}" (threshold: 50%), showing random artwork instead`);
+      } else {
+        console.log(`✅ Found ${matchedArtworks.length}/${artworks.length} artworks matching mood "${mood}" (≥50% match)`);
+        artworks = matchedArtworks;
+      }
+    }
+
+    if (artworks.length === 0) {
+      throw new Error(`No artworks found matching criteria (museum: ${museum}, mood: ${mood || 'any'})`);
+    }
 
     // Pick a random artwork from the results
     const randomIndex = Math.floor(Math.random() * artworks.length);
     const artwork = artworks[randomIndex];
 
-    // console.log(`✅ Artwork fetched from Firestore (${deviceOrientation}):`, artwork.title);
+    console.log(`✅ Artwork fetched from Firestore:`, artwork.title);
     return artwork;
   } catch (error) {
     console.error('Error fetching artwork from Firestore:', error);
