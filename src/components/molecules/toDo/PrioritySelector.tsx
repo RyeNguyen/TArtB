@@ -23,7 +23,7 @@ export const PrioritySelector = ({
     {
       label: (
         <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.ERROR_400} size={16} />
+          <FlagIcon color={COLORS.ERROR_400} />
           <Typography className="text-white">
             {t("toDo.priority.high")}
           </Typography>
@@ -34,7 +34,7 @@ export const PrioritySelector = ({
     {
       label: (
         <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.WARNING_400} size={16} />
+          <FlagIcon color={COLORS.WARNING_400} />
           <Typography className="text-white">
             {t("toDo.priority.medium")}
           </Typography>
@@ -45,7 +45,7 @@ export const PrioritySelector = ({
     {
       label: (
         <div className="flex items-center gap-2">
-          <FlagIcon color={COLORS.BLUE_400} size={16} />
+          <FlagIcon color={COLORS.BLUE_400} />
           <Typography className="text-white">
             {t("toDo.priority.low")}
           </Typography>
@@ -56,7 +56,7 @@ export const PrioritySelector = ({
     {
       label: (
         <div className="flex items-center gap-2">
-          <FlagIcon size={16} />
+          <FlagIcon />
           <Typography className="text-white">
             {t("toDo.priority.none")}
           </Typography>

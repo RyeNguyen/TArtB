@@ -28,9 +28,11 @@ interface TodoStore {
   isSyncing: boolean;
   hasInitializedDefaultList: boolean;
   selectedTaskId: string | null;
+  collapsedGroupIds: string[];
   loading: TodoLoadingState;
   setLoading: (key: keyof TodoLoadingState, value: boolean) => void;
   setSelectedTask: (taskId: string | null) => void;
+  setCollapsedGroupIds: (ids: string[]) => void;
 
   // Initialization & Sync
   loadData: () => Promise<void>;
@@ -116,6 +118,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   isSyncing: false,
   hasInitializedDefaultList: false,
   selectedTaskId: null,
+  collapsedGroupIds: [],
   loading: {
     isAddingTask: false,
     isUpdatingTask: false,
@@ -137,12 +140,50 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     set({ selectedTaskId: taskId });
   },
 
+  setCollapsedGroupIds: (ids) => {
+    set({ collapsedGroupIds: ids });
+    // Persist to Chrome storage
+    const storage =
+      typeof window !== "undefined" &&
+      typeof (window as any).chrome !== "undefined" &&
+      (window as any).chrome?.storage?.local
+        ? (window as any).chrome.storage.local
+        : null;
+
+    if (storage) {
+      storage.set({ collapsedGroupIds: ids });
+    } else {
+      // Fallback to localStorage
+      localStorage.setItem("collapsedGroupIds", JSON.stringify(ids));
+    }
+  },
+
   loadData: async () => {
     const data = await todoService.load();
+
+    // Load collapsedGroupIds from Chrome storage (local only, not synced to Firestore)
+    const storage =
+      typeof window !== "undefined" &&
+      typeof (window as any).chrome !== "undefined" &&
+      (window as any).chrome?.storage?.local
+        ? (window as any).chrome.storage.local
+        : null;
+
+    let collapsedGroupIds: string[] = [];
+    if (storage) {
+      const result = await storage.get("collapsedGroupIds");
+      collapsedGroupIds = result.collapsedGroupIds || [];
+    } else {
+      // Fallback to localStorage
+      const stored = localStorage.getItem("collapsedGroupIds");
+      collapsedGroupIds = stored ? JSON.parse(stored) : [];
+    }
+
     set({
       lists: data.lists,
       tasks: data.tasks,
       tags: data.tags,
+      collapsedGroupIds,
       isLoaded: true,
       // If lists exist, mark as initialized to prevent creating defaults
       hasInitializedDefaultList:

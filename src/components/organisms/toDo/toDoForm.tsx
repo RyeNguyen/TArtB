@@ -138,7 +138,7 @@ export const ToDoForm = () => {
         icon={PlusIcon}
         iconColor={COLORS.WHITE}
         type="submit"
-        className="p-1! bg-transparent!"
+        isGhost
         disabled={isAdding}
       />
 

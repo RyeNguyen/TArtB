@@ -1,20 +1,23 @@
 import { IconProps } from "../../types";
 
-const PlusIcon = ({ color = "#FFF", size = 24, ...props }: IconProps) => (
+const PlusIcon = ({ color = "#FFF", size = 24 }: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    viewBox="-0.8 -0.8 24 24"
     fill="none"
-    {...props}
+    stroke={color}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    id="Square-Rounded-Plus--Streamline-Tabler"
+    height={size}
+    width={size}
   >
     <path
-      style={{
-        scale: size === 16 ? "66.67%" : 1,
-      }}
-      fill={color}
-      d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2m0 1.5c4.703 0 8.5 3.797 8.5 8.5s-3.797 8.5-8.5 8.5A8.49 8.49 0 0 1 3.5 12c0-4.703 3.797-8.5 8.5-8.5m-.012 3.49a.75.75 0 0 0-.738.76v3.5h-3.5a.751.751 0 1 0 0 1.5h3.5v3.5a.751.751 0 1 0 1.5 0v-3.5h3.5a.751.751 0 1 0 0-1.5h-3.5v-3.5a.75.75 0 0 0-.762-.76"
-    />
+      d="M11.2 2.8c6.720000000000001 0 8.4 1.6800000000000002 8.4 8.4s-1.6800000000000002 8.4 -8.4 8.4 -8.4 -1.6800000000000002 -8.4 -8.4 1.6800000000000002 -8.4 8.4 -8.4z"
+      stroke-width="1.6"
+    ></path>
+    <path d="M14 11.2H8.4" stroke-width="1.6"></path>
+    <path d="M11.2 8.4v5.6" stroke-width="1.6"></path>
   </svg>
 );
 export default PlusIcon;

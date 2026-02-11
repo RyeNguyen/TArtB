@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useArtworkStore } from '../../stores/artworkStore';
-import { generateSmallImageUrl } from '@utils/imageUtils';
+import { useEffect, useRef, useState } from "react";
+import { useArtworkStore } from "../../stores/artworkStore";
+import { generateSmallImageUrl } from "@utils/imageUtils";
 
 interface InteractiveArtworkProps {
   imageUrl: string;
@@ -11,20 +11,20 @@ const getDefaultUrl = (url: string): string => {
   // WikiArt: Handle two formats due to API inconsistency
   // Format 1: .../painting.jpg!HD.jpg → .../painting.jpg
   // Format 2: .../painting!HD.jpg → .../painting.jpg
-  if (url.includes('wikiart.org')) {
+  if (url.includes("wikiart.org")) {
     if (/\.jpg![A-Za-z]+\.jpg$/i.test(url)) {
       // Base already has .jpg extension - just remove format suffix
-      return url.replace(/![A-Za-z]+\.jpg$/i, '');
+      return url.replace(/![A-Za-z]+\.jpg$/i, "");
     } else {
       // Base doesn't have .jpg - replace format suffix with .jpg
-      return url.replace(/![A-Za-z]+\.jpg$/i, '.jpg');
+      return url.replace(/![A-Za-z]+\.jpg$/i, ".jpg");
     }
   }
 
   // Art Institute (IIIF): Use 'full' for original size
   // Example: .../full/843,/0/default.jpg → .../full/full/0/default.jpg
-  if (url.includes('artic.edu')) {
-    return url.replace(/\/full\/\d+,\//, '/full/full/');
+  if (url.includes("artic.edu")) {
+    return url.replace(/\/full\/\d+,\//, "/full/full/");
   }
 
   // For other formats, return as-is
@@ -45,26 +45,26 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
   // Progressive loading: Preload new image, then crossfade
   useEffect(() => {
     const init = async () => {
-      console.group('🖼️ Progressive Image Loading');
+      console.group("🖼️ Progressive Image Loading");
 
       // Generate small image URL from HD URL (works for all museums)
       const smallImageUrl = generateSmallImageUrl(imageUrl);
 
-      console.log('Small URL:', smallImageUrl);
-      console.log('HD URL:', imageUrl);
-      console.log('Default URL:', getDefaultUrl(imageUrl));
+      console.log("Small URL:", smallImageUrl);
+      console.log("HD URL:", imageUrl);
+      console.log("Default URL:", getDefaultUrl(imageUrl));
 
       // Step 1: Preload small image in background (keep current artwork visible)
       const smallImage = new Image();
-      smallImage.crossOrigin = 'anonymous';
+      smallImage.crossOrigin = "anonymous";
 
       const loadSmallImage = new Promise<void>((resolve, reject) => {
         smallImage.onload = () => {
-          console.log('✓ Small image preloaded');
+          console.log("✓ Small image preloaded");
           resolve();
         };
         smallImage.onerror = () => {
-          console.warn('⚠️ Small image failed to load');
+          console.warn("⚠️ Small image failed to load");
           reject();
         };
         smallImage.src = smallImageUrl !== imageUrl ? smallImageUrl : imageUrl;
@@ -79,7 +79,9 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
 
         // Step 3: Wait for fade-out, then show new artwork
         setTimeout(() => {
-          setCurrentImageUrl(smallImageUrl !== imageUrl ? smallImageUrl : imageUrl);
+          setCurrentImageUrl(
+            smallImageUrl !== imageUrl ? smallImageUrl : imageUrl,
+          );
           setFallbackLevel(smallImageUrl !== imageUrl ? 1 : 0);
           setIsUpgradingToHD(false);
           setIsTransitioning(false); // Fade in immediately
@@ -89,10 +91,10 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
           // Step 4: Upgrade to HD in background (if applicable)
           if (smallImageUrl !== imageUrl) {
             const hdImage = new Image();
-            hdImage.crossOrigin = 'anonymous';
+            hdImage.crossOrigin = "anonymous";
 
             hdImage.onload = () => {
-              console.log('✨ HD image loaded, upgrading...');
+              console.log("✨ HD image loaded, upgrading...");
               setIsUpgradingToHD(true);
               setTimeout(() => {
                 setCurrentImageUrl(imageUrl);
@@ -102,21 +104,21 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
             };
 
             hdImage.onerror = () => {
-              console.warn('⚠️ HD failed, trying base image...');
+              console.warn("⚠️ HD failed, trying base image...");
               const defaultUrl = getDefaultUrl(imageUrl);
 
               if (defaultUrl !== imageUrl && defaultUrl !== smallImageUrl) {
                 const defaultImage = new Image();
-                defaultImage.crossOrigin = 'anonymous';
+                defaultImage.crossOrigin = "anonymous";
 
                 defaultImage.onload = () => {
-                  console.log('✅ Base image loaded');
+                  console.log("✅ Base image loaded");
                   setCurrentImageUrl(defaultUrl);
                   setFallbackLevel(2);
                 };
 
                 defaultImage.onerror = () => {
-                  console.error('❌ Base image failed, staying with small');
+                  console.error("❌ Base image failed, staying with small");
                 };
 
                 defaultImage.src = defaultUrl;
@@ -128,7 +130,7 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
         }, 300); // Fade-out duration
       } catch (error) {
         // If preload fails, skip optimization and load base image directly
-        console.warn('⚠️ Preload failed, loading base image directly:', error);
+        console.warn("⚠️ Preload failed, loading base image directly:", error);
 
         // Try base URL first
         const defaultUrl = getDefaultUrl(imageUrl);
@@ -136,10 +138,10 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
 
         // Preload the fallback URL
         const fallbackImage = new Image();
-        fallbackImage.crossOrigin = 'anonymous';
+        fallbackImage.crossOrigin = "anonymous";
 
         fallbackImage.onload = () => {
-          console.log('✅ Base image preloaded, showing now');
+          console.log("✅ Base image preloaded, showing now");
 
           // Fade out
           setIsTransitioning(true);
@@ -155,7 +157,7 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
 
         fallbackImage.onerror = () => {
           // If everything fails, show HD URL anyway (last resort)
-          console.error('❌ All preloads failed, showing HD URL anyway');
+          console.error("❌ All preloads failed, showing HD URL anyway");
 
           setIsTransitioning(true);
           setTimeout(() => {
@@ -205,26 +207,32 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
         } else {
           // Can't generate small version, try default
           const defaultUrl = getDefaultUrl(currentImageUrl);
-          console.warn(`Failed to load HD image, trying default: ${defaultUrl}`);
+          console.warn(
+            `Failed to load HD image, trying default: ${defaultUrl}`,
+          );
           setCurrentImageUrl(defaultUrl);
           setFallbackLevel(2);
         }
       } else if (fallbackLevel === 1) {
         // Try default URL (remove size suffixes)
         const defaultUrl = getDefaultUrl(currentImageUrl);
-        console.warn(`Failed to load small image, trying default: ${defaultUrl}`);
+        console.warn(
+          `Failed to load small image, trying default: ${defaultUrl}`,
+        );
         setCurrentImageUrl(defaultUrl);
         setFallbackLevel(2);
       } else {
-        console.error(`Failed to load image after all fallbacks: ${currentImageUrl}`);
+        console.error(
+          `Failed to load image after all fallbacks: ${currentImageUrl}`,
+        );
       }
     };
 
     if (image.complete && image.naturalHeight !== 0) {
       handleImageLoad();
     } else {
-      image.addEventListener('load', handleImageLoad);
-      image.addEventListener('error', handleImageError);
+      image.addEventListener("load", handleImageLoad);
+      image.addEventListener("error", handleImageError);
     }
 
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -235,14 +243,14 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
       }, 200);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       effectRef.current?.destroy();
-      image.removeEventListener('load', handleImageLoad);
-      image.removeEventListener('error', handleImageError);
+      image.removeEventListener("load", handleImageLoad);
+      image.removeEventListener("error", handleImageError);
     };
   }, [currentImageUrl, fallbackLevel, currentArtwork, imageUrl]);
 
@@ -254,10 +262,10 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
         style={{
           zIndex: 0,
           backgroundImage: `url(${currentImageUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'blur(50px)',
-          transform: 'scale(1.1)', // Hide blur edges
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "blur(50px)",
+          transform: "scale(1.1)", // Hide blur edges
           opacity: isTransitioning ? 0 : isUpgradingToHD ? 0.7 : 1,
         }}
       />
@@ -266,7 +274,7 @@ export const InteractiveArtwork = ({ imageUrl }: InteractiveArtworkProps) => {
         className="fixed inset-0 w-full h-full transition-opacity duration-500"
         style={{
           zIndex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
           opacity: isTransitioning ? 0 : 1,
         }}
       />
@@ -319,7 +327,7 @@ class Cell {
     this.vx = 0;
     this.vy = 0;
     this.ease = 0.08; // Lower = slower recovery to original position
-    this.friction = 0.90; // Higher = less velocity decay, longer effect
+    this.friction = 0.9; // Higher = less velocity decay, longer effect
     this.col = col;
     this.row = row;
     this.movement = 0;
@@ -418,7 +426,7 @@ class Effect {
     this.width = this.canvas.width;
     this.height = this.canvas.height;
     this.image = image;
-    this.ctx = canvas.getContext('2d');
+    this.ctx = canvas.getContext("2d");
 
     // Reduced grid size for better performance (40x40 = 1,600 cells vs 100x100 = 10,000)
     this.gridSize = 60;
@@ -442,7 +450,7 @@ class Effect {
       prevY: 0,
       vx: 0,
       vy: 0,
-      radius: 100,
+      radius: 60,
     };
 
     // Performance tracking
@@ -485,9 +493,9 @@ class Effect {
     };
 
     // Add event listeners
-    this.canvas.addEventListener('mousemove', this.handleMouseMove);
-    this.canvas.addEventListener('mouseenter', this.handleMouseEnter);
-    this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
+    this.canvas.addEventListener("mousemove", this.handleMouseMove);
+    this.canvas.addEventListener("mouseenter", this.handleMouseEnter);
+    this.canvas.addEventListener("mouseleave", this.handleMouseLeave);
   }
 
   init() {
@@ -608,8 +616,8 @@ class Effect {
   destroy() {
     this.stopAnimation();
     // Remove event listeners to prevent memory leaks
-    this.canvas.removeEventListener('mousemove', this.handleMouseMove);
-    this.canvas.removeEventListener('mouseenter', this.handleMouseEnter);
-    this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
+    this.canvas.removeEventListener("mousemove", this.handleMouseMove);
+    this.canvas.removeEventListener("mouseenter", this.handleMouseEnter);
+    this.canvas.removeEventListener("mouseleave", this.handleMouseLeave);
   }
 }

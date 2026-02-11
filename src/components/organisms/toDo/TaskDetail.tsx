@@ -25,11 +25,11 @@ import { useTodo } from "@hooks/useToDo";
 import { getDeadlineColor } from "@utils/dateUtils";
 import DeleteIcon from "@icons/Delete";
 import { useConfetti } from "@organisms/toDo/ToDo";
-import GroupIcon from "@icons/Group";
 import MoreIcon from "@icons/More";
 import { SubtaskSection } from "./SubtaskSection";
 import { TagDisplay } from "@molecules/toDo/TagDisplay";
 import { PrioritySelector } from "@molecules/toDo/PrioritySelector";
+import DuplicateIcon from "@icons/Duplicate";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 interface TaskDetailProps {
@@ -160,7 +160,7 @@ export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
     {
       label: (
         <div className="flex items-center gap-2">
-          <GroupIcon />
+          <DuplicateIcon />
           <Typography className="text-white">
             {t("toDo.action.duplicate")}
           </Typography>

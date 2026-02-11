@@ -1,20 +1,19 @@
 import { IconProps } from "../../types";
 
-const ChevronIcon = ({ color = "#FFF", size = 24, ...props }: IconProps) => (
+const ChevronIcon = ({ color = "#FFF", size = 24, className }: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    viewBox="-0.8 -0.8 24 24"
     fill="none"
-    {...props}
+    stroke={color}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    id="Chevron-Down--Streamline-Tabler"
+    height={size}
+    width={size}
+    className={className}
   >
-    <path
-      style={{
-        scale: size === 16 ? "66.67%" : 1,
-      }}
-      fill={color}
-      d="M21.742 6.37a.75.75 0 0 0-.524.23l-9.22 9.22-9.22-9.22a.75.75 0 1 0-1.06 1.06l9.75 9.75a.75.75 0 0 0 1.06 0l9.75-9.75a.75.75 0 0 0-.536-1.29"
-    />
+    <path d="m5.6 8.4 5.6 5.6 5.6 -5.6" stroke-width="1.6"></path>
   </svg>
 );
 export default ChevronIcon;

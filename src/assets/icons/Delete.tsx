@@ -1,19 +1,31 @@
-import { IconProps } from "../../types";
+import { IconProps } from "@/types/common";
 
-const DeleteIcon = ({ color = "#FFF", size = 24, ...props }: IconProps) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    fill="none"
-    viewBox="0 0 24 24"
-    {...props}
-  >
-    <path
-      fill={color}
-      d="M10.25 2.25a.75.75 0 0 0-.717 1H7.32a2.75 2.75 0 0 0-2.288 1.225L3.85 6.25H3.75a.75.75 0 1 0 0 1.5h.382a.8.8 0 0 0 .194.004l1.237 11.539a2.76 2.76 0 0 0 2.734 2.457h7.405a2.76 2.76 0 0 0 2.734-2.457l1.238-11.54a.8.8 0 0 0 .19-.003h.386a.75.75 0 1 0 0-1.5h-.099l-1.183-1.775A2.75 2.75 0 0 0 16.68 3.25h-2.213a.75.75 0 0 0-.717-1zm-2.93 2.5h9.36c.418 0 .807.208 1.04.557l.629.943H5.65l.63-.943v-.001c.232-.348.62-.556 1.04-.556m-1.485 3h12.33l-1.22 11.383a1.24 1.24 0 0 1-1.243 1.117H8.297a1.24 1.24 0 0 1-1.242-1.117z"
-    />
-  </svg>
-);
+const DeleteIcon = ({ size = 24, color = "#FFF" }: IconProps) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="-0.75 -0.75 24 24"
+      fill="none"
+      stroke={color}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      id="Trash--Streamline-Tabler"
+      height={size}
+      width={size}
+    >
+      <path d="m3.75 6.5625 15 0" stroke-width="1.6"></path>
+      <path d="m9.375 10.3125 0 5.625" stroke-width="1.6"></path>
+      <path d="m13.125 10.3125 0 5.625" stroke-width="1.6"></path>
+      <path
+        d="m4.6875 6.5625 0.9375 11.25a1.675 1.675 0 0 0 1.675 1.675h7.5a1.675 1.675 0 0 0 1.675 -1.675l0.9375 -11.25"
+        stroke-width="1.6"
+      ></path>
+      <path
+        d="M8.4375 6.5625V3.75a0.9375 0.9375 0 0 1 0.9375 -0.9375h3.75a0.9375 0.9375 0 0 1 0.9375 0.9375v2.8125"
+        stroke-width="1.6"
+      ></path>
+    </svg>
+  );
+};
 
 export default DeleteIcon;

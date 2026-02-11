@@ -29,6 +29,12 @@ import { TypoVariants } from "@constants/common";
 import { shortDateFormatMap } from "@constants/toDoConfig";
 import { useConfetti } from "@organisms/toDo/ToDo";
 import { useTodoStore } from "@stores/todoStore";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@atoms/Accordion";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -58,24 +64,33 @@ const DroppableGroup = ({
   const showDropHighlight = isOverGroup && group.isDroppable && !isActiveGroup;
 
   return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col rounded-md transition-colors ${
-        showDropHighlight ? "bg-white/10" : ""
-      }`}
-    >
-      {group.label && (
-        <Typography
-          variant={TypoVariants.SUBTITLE}
-          className="text-white/50 uppercase mt-2 mb-1"
-        >
-          {group.label}
-        </Typography>
-      )}
-      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        {children}
-      </SortableContext>
-    </div>
+    <AccordionItem id={group.id}>
+      <div
+        ref={setNodeRef}
+        className={`flex flex-col rounded-md transition-colors ${
+          showDropHighlight ? "bg-white/10" : ""
+        }`}
+      >
+        {group.label && (
+          <AccordionTrigger id={group.id}>
+            <Typography
+              variant={TypoVariants.SUBTITLE}
+              className="text-white/50 text-left flex-1 uppercase mt-2 mb-1"
+            >
+              {group.label}
+            </Typography>
+          </AccordionTrigger>
+        )}
+        <AccordionContent id={group.id}>
+          <SortableContext
+            items={taskIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {children}
+          </SortableContext>
+        </AccordionContent>
+      </div>
+    </AccordionItem>
   );
 };
 
@@ -86,7 +101,13 @@ interface ToDoListProps {
 export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
   const { t, i18n } = useTranslation();
   const { groupedTasks, handleToggleTask, handleReorderTask } = useTodo();
-  const { selectedTaskId, setSelectedTask } = useTodoStore();
+  const {
+    selectedTaskId,
+    setSelectedTask,
+    collapsedGroupIds,
+    setCollapsedGroupIds,
+    isLoaded,
+  } = useTodoStore();
   const fireConfetti = useConfetti();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [_, setActiveTask] = useState<Task | null>(null);
@@ -293,30 +314,35 @@ export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
           },
         }}
       >
-        {groupedTasks.map((group) => (
-          <DroppableGroup
-            key={group.id}
-            group={group}
-            isActiveGroup={activeGroupId === group.id}
-            isOverGroup={overGroupId === group.id}
-          >
-            {group.tasks.map((task: Task) => (
-              <SortableTaskItem
-                key={task.id}
-                task={task}
-                groupId={group.id}
-                isOpen={isFocusMode ? false : openTaskId === task.id}
-                onOpenChange={(open) => handleOpenChange(task.id, open)}
-                onToggle={handleToggleWithConfetti}
-                formatDeadline={formatDeadline}
-                disableSortAnimation={isCrossGroupDrag}
-                isFocusMode={isFocusMode}
-                onTaskClick={setSelectedTask}
-                isSelected={isFocusMode && selectedTaskId === task.id}
-              />
-            ))}
-          </DroppableGroup>
-        ))}
+        <Accordion
+          closedIds={isLoaded ? collapsedGroupIds : undefined}
+          onClosedIdsChange={isLoaded ? setCollapsedGroupIds : undefined}
+        >
+          {groupedTasks.map((group) => (
+            <DroppableGroup
+              key={group.id}
+              group={group}
+              isActiveGroup={activeGroupId === group.id}
+              isOverGroup={overGroupId === group.id}
+            >
+              {group.tasks.map((task: Task) => (
+                <SortableTaskItem
+                  key={task.id}
+                  task={task}
+                  groupId={group.id}
+                  isOpen={isFocusMode ? false : openTaskId === task.id}
+                  onOpenChange={(open) => handleOpenChange(task.id, open)}
+                  onToggle={handleToggleWithConfetti}
+                  formatDeadline={formatDeadline}
+                  disableSortAnimation={isCrossGroupDrag}
+                  isFocusMode={isFocusMode}
+                  onTaskClick={setSelectedTask}
+                  isSelected={isFocusMode && selectedTaskId === task.id}
+                />
+              ))}
+            </DroppableGroup>
+          ))}
+        </Accordion>
 
         <DragOverlay dropAnimation={null} />
       </DndContext>

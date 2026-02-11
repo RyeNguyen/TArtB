@@ -81,7 +81,7 @@ export const ToDoCompactMode = () => {
             <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
               {selectedList?.title || t("toDo.myDay")}
             </Typography>
-            <ChevronIcon size={16} />
+            <ChevronIcon />
           </div>
         </Dropdown>
 
