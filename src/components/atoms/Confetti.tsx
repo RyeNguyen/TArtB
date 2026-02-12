@@ -77,7 +77,7 @@ export const Confetti = forwardRef<ConfettiHandle, ConfettiProps>(
     return (
       <canvas
         ref={canvasRef}
-        className={`absolute w-full h-full pointer-events-none -z-10 ${className}`}
+        className={`absolute inset-0 w-full h-full pointer-events-none z-5 ${className}`}
       />
     );
   },

@@ -194,10 +194,13 @@ export const FocusTaskDetail = () => {
   ];
 
   return (
-    <div className="w-[40%] h-full flex flex-col pt-4 border-l border-white/20 overflow-hidden">
+    <div
+      className="w-[40%] h-full flex flex-col border-l border-white/20 overflow-hidden"
+      style={{ backgroundColor: selectedList?.color }}
+    >
       {selectedTask ? (
         <>
-          <div className="pl-4 flex items-center justify-between gap-3 border-b border-white/20 pb-4 shrink-0">
+          <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-white/20 pb-4 shrink-0">
             <Checkbox
               checked={selectedTask.isCompleted}
               borderColor={priorityConfig[priority].color}
@@ -268,7 +271,7 @@ export const FocusTaskDetail = () => {
             </div>
           </div>
 
-          <div className="pl-4 pt-4 flex items-center justify-between border-t border-white/20 shrink-0">
+          <div className="px-4 py-3 flex items-center justify-between border-t border-white/20 shrink-0">
             <Dropdown
               value={selectedTask?.listId}
               onChange={(listId: string) =>

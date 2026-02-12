@@ -103,7 +103,16 @@
     },
     "list": {
       "searchPlaceholder": "Search list...",
-      "createNew": "Create new list {{listName}}"
+      "createNew": "Create new list {{listName}}",
+      "deleteTitle": "Delete list {{listName}}",
+      "deleteMessage": "All tasks in this list will also be deleted.",
+      "addTitle": "Add New List",
+      "editTitle": "Edit List",
+      "name": "List Name",
+      "namePlaceholder": "Enter list name...",
+      "color": "Color",
+      "add": "Add List",
+      "save": "Save Changes"
     },
     "tag": {
       "searchPlaceholder": "Search tag...",
@@ -153,8 +162,9 @@
       }
     },
     "action": {
+      "edit": "Edit",
       "duplicate": "Duplicate",
-      "delete": "Delete task"
+      "delete": "Delete"
     },
     "subtask": {
       "title": "Sub-tasks",

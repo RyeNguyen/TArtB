@@ -71,3 +71,17 @@ export enum OtherTaskActions {
   DUPLICATE = "duplicate",
   DELETE = "delete",
 }
+
+export enum ListActions {
+  EDIT = "edit",
+  DUPLICATE = "duplicate",
+  DELETE = "delete",
+}
+
+export enum ModalType {
+  NONE = "none",
+  ADD = "add",
+  EDIT = "edit",
+  DELETE = "delete",
+  NOTIFY = "notify",
+}

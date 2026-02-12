@@ -9,9 +9,10 @@ interface DropdownProps {
   value?: string | string[];
   header?: ReactNode;
   isCompact?: boolean;
+  open?: boolean;
   multipleSelect?: boolean;
   onChange?: (value: string) => void;
-  onOpenChange?: () => void;
+  onOpenChange?: (open?: boolean) => void;
   className?: string;
   triggerClassName?: string;
   menuClassName?: string;
@@ -24,6 +25,7 @@ export const Dropdown = ({
   value,
   header,
   isCompact = false,
+  open: controlledOpen,
   multipleSelect = false,
   onChange,
   onOpenChange,
@@ -32,18 +34,29 @@ export const Dropdown = ({
   menuClassName = "",
   menuItemClassName = "",
 }: DropdownProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
 
   const handleChange = (itemValue: string) => {
     onChange?.(itemValue);
     if (!multipleSelect) {
-      setIsOpen(false);
+      if (isControlled) {
+        onOpenChange?.(false);
+      } else {
+        setInternalOpen(false);
+      }
     }
   };
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    onOpenChange && onOpenChange();
+    if (isControlled) {
+      onOpenChange?.(open);
+    } else {
+      setInternalOpen(open);
+      onOpenChange?.(open);
+    }
   };
 
   return (
@@ -72,9 +85,12 @@ export const Dropdown = ({
                   key={item.value}
                   className={menuItemClassName}
                   isActive={isActive}
-                  onClick={
-                    item.onClick ? item.onClick : () => handleChange(item.value)
-                  }
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    item.onClick
+                      ? item.onClick
+                      : () => handleChange(item.value);
+                  }}
                   data={item}
                 />
               );
@@ -88,7 +104,7 @@ export const Dropdown = ({
 
 interface DropdownItemProps {
   data: ItemProps;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   isActive?: boolean;
   className?: string;
   disabled?: boolean;
@@ -101,9 +117,9 @@ export const DropdownItem = ({
   className = "",
   disabled = false,
 }: DropdownItemProps) => {
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
-    onClick?.();
+    onClick?.(e);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {

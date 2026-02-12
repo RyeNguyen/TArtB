@@ -301,7 +301,7 @@ export const WidgetWrapper = ({
       }}
     >
       <Glass
-        className={`flex flex-col gap-0.5 ${isFocused ? "h-full" : "overflow-hidden"}`}
+        className={`flex flex-col gap-0.5 ${isFocused ? "h-full" : ""}`}
         style={{
           transform: "translateZ(0)",
           WebkitFontSmoothing: "antialiased",
@@ -310,9 +310,9 @@ export const WidgetWrapper = ({
       >
         {/* Widget Header - Drag Handle */}
         <motion.div
-          className="flex px-4 pt-2 items-center justify-between gap-2 z-10 cursor-grab active:cursor-grabbing"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isHovered ? 1 : 0 }}
+          className="flex px-4 py-1 border-b border-white/20 items-center justify-between gap-2 z-10 cursor-grab active:cursor-grabbing"
+          initial={{ opacity: isFocused ? 1 : 0 }}
+          animate={{ opacity: isHovered ? 1 : isFocused ? 1 : 0 }}
           transition={{ duration: 0.2 }}
           onPointerDown={(e) => dragControls.start(e)}
         >
@@ -340,14 +340,7 @@ export const WidgetWrapper = ({
 
         {/* Widget Body */}
         <div
-          className={`rounded-2xl px-4 py-3 bg-transparent ${isFocused ? "flex-1 min-h-0" : "overflow-hidden"} ${innerGlassClassName}`}
-          onWheel={(e) => {
-            // Only stop propagation in normal mode
-            // In focus mode, allow scrolling to work
-            if (!isFocused) {
-              e.stopPropagation();
-            }
-          }}
+          className={`bg-transparent ${isFocused ? "flex-1 min-h-0 overflow-hidden" : ""} ${innerGlassClassName}`}
         >
           {children}
         </div>

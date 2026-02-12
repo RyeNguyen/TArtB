@@ -84,7 +84,7 @@ export const ToDoForm = () => {
       <div
         onFocus={() => setIsInputFocused(true)}
         onBlur={handleBlur}
-        className="w-full flex flex-1 flex-col gap-2 bg-white/50 rounded-2xl p-1"
+        className="w-full flex flex-1 flex-col gap-2 bg-white/70 rounded-2xl p-1"
       >
         <input
           value={inputValue}

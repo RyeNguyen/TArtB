@@ -1,21 +1,19 @@
 import { IconProps } from "../../types";
 
-const CloseIcon = ({ color = "#FFF", size = 24, ...props }: IconProps) => (
+const CloseIcon = ({ color = "#FFF", size = 24 }: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    viewBox="-0.8 -0.8 24 24"
     fill="none"
-    viewBox="0 0 24 24"
-    {...props}
+    stroke={color}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    id="X--Streamline-Tabler"
+    height={size}
+    width={size}
   >
-    <path
-      style={{
-        scale: size === 16 ? "66.67%" : 1,
-      }}
-      fill={color}
-      d="M6.293 6.293a1 1 0 0 1 1.414 0L12 10.586l4.293-4.293a1 1 0 1 1 1.414 1.414L13.414 12l4.293 4.293a1 1 0 0 1-1.414 1.414L12 13.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L10.586 12 6.293 7.707a1 1 0 0 1 0-1.414z"
-    />
+    <path d="M16.8 5.6 5.6 16.8" stroke-width="1.6"></path>
+    <path d="m5.6 5.6 11.2 11.2" stroke-width="1.6"></path>
   </svg>
 );
 

@@ -57,7 +57,7 @@ export const ToDoCompactMode = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 min-w-[20rem] max-w-100 max-h-160 relative overflow-visible">
+    <div className="flex p-4 pt-2 flex-col gap-2 min-w-[20rem] max-w-100 max-h-160 relative">
       <div className="flex flex-col gap-2">
         <Dropdown
           value={selectedList?.id}

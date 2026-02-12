@@ -11,12 +11,15 @@ export const ToDoFocusMode = () => {
   const { selectedList } = useTodo();
 
   return (
-    <div className="flex w-full h-full border-t border-white/20">
+    <div className="flex w-full h-full overflow-hidden rounded-b-2xl">
       <ManagementSidebar />
 
-      <div className="w-[50%] flex h-full flex-1 flex-col p-4 pb-0 gap-3">
+      <div
+        className="w-[50%] flex h-full flex-1 flex-col p-4 gap-3"
+        style={{ backgroundColor: selectedList?.color }}
+      >
         <div className="flex items-center justify-between shrink-0">
-          <Typography variant={TypoVariants.SUBTITLE}>
+          <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
             {selectedList?.title}
           </Typography>
 

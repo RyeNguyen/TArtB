@@ -90,7 +90,16 @@
     },
     "list": {
       "searchPlaceholder": "Tìm danh sách...",
-      "createNew": "Tạo mới danh sách {{listName}}"
+      "createNew": "Tạo mới danh sách {{listName}}",
+      "deleteTitle": "Xóa danh sách {{listName}}",
+      "deleteMessage": "Tất cả công việc trong danh sách này cũng sẽ bị xóa.",
+      "addTitle": "Thêm Danh Sách Mới",
+      "editTitle": "Chỉnh Sửa Danh Sách",
+      "name": "Tên Danh Sách",
+      "namePlaceholder": "Nhập tên danh sách...",
+      "color": "Màu sắc",
+      "add": "Thêm Danh Sách",
+      "save": "Lưu Thay Đổi"
     },
     "tag": {
       "searchPlaceholder": "Tìm kiếm nhãn...",
@@ -144,8 +153,9 @@
       }
     },
     "action": {
+      "edit": "Chỉnh sửa",
       "duplicate": "Tạo bản sao",
-      "delete": "Xoá công việc"
+      "delete": "Xoá"
     },
     "subtask": {
       "title": "Công việc con",
