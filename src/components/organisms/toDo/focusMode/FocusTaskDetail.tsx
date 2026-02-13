@@ -195,7 +195,7 @@ export const FocusTaskDetail = () => {
 
   return (
     <div
-      className="w-[40%] h-full flex flex-col border-l border-white/20 overflow-hidden"
+      className="h-full flex flex-col overflow-hidden"
       style={{ backgroundColor: selectedList?.color }}
     >
       {selectedTask ? (

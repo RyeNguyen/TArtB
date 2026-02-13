@@ -149,7 +149,7 @@ export const ManagementSidebar = () => {
   };
 
   return (
-    <div className="w-[16%] h-full p-2 pr-4 border-r border-white/20">
+    <div className="h-full p-2 pr-4 flex flex-col">
       <div
         onMouseEnter={() => setIsHoveringList(true)}
         onMouseLeave={() => setIsHoveringList(false)}
