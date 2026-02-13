@@ -87,9 +87,11 @@ export const Dropdown = ({
                   isActive={isActive}
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
-                    item.onClick
-                      ? item.onClick
-                      : () => handleChange(item.value);
+                    if (item.onClick) {
+                      item.onClick();
+                    } else {
+                      handleChange(item.value);
+                    }
                   }}
                   data={item}
                 />

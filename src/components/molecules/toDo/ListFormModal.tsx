@@ -21,10 +21,12 @@ const COLORS = [
   "transparent",
   "#4b1e1f", // red
   "#3c2b0f", // amber
-  "#173332", // emerald
-  "#1a223d", // blue
-  "#22183f", // violet
+  "#093E1E", // emerald
+  "#072A46", // blue
+  "#46216F", // violet
   "#0d5357", // teal
+  "#293440",
+  "#37383C",
 ];
 
 export const ListFormModal = ({

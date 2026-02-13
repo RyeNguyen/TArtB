@@ -28,6 +28,7 @@ export interface TodoService {
   // Granular List operations
   saveList(list: TaskList): Promise<void>;
   deleteListById(id: string): Promise<void>;
+  duplicateList(id: string, newList: TaskList, newTasks: Task[]): Promise<void>;
 
   // Granular Task operations
   saveTask(task: Task): Promise<void>;
@@ -85,7 +86,13 @@ class LocalTodoService implements TodoService {
       try {
         console.log("[LocalService] Loading from Chrome storage...");
         const result = await storage.get(STORAGE_KEY);
+        console.log("[LocalService] Raw storage result:", result);
         const data = this.ensureValidData(result[STORAGE_KEY]);
+        console.log("[LocalService] Loaded data:", {
+          listsCount: data.lists.length,
+          tasksCount: data.tasks.length,
+          tagsCount: data.tags.length,
+        });
         this.cache = data;
         return data;
       } catch (error) {
@@ -101,6 +108,11 @@ class LocalTodoService implements TodoService {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       const data = this.ensureValidData(parsed);
+      console.log("[LocalService] Loaded data from localStorage:", {
+        listsCount: data.lists.length,
+        tasksCount: data.tasks.length,
+        tagsCount: data.tags.length,
+      });
       this.cache = data;
       return data;
     } catch (error) {
@@ -135,7 +147,16 @@ class LocalTodoService implements TodoService {
 
   // === Granular List operations ===
   async saveList(list: TaskList): Promise<void> {
-    if (!this.cache) await this.load();
+    if (!this.cache) {
+      console.warn("[LocalService] Cache is null in saveList, loading...");
+      await this.load();
+    }
+
+    console.log("[LocalService] saveList - Cache state:", {
+      listsCount: this.cache!.lists.length,
+      tasksCount: this.cache!.tasks.length,
+      tagsCount: this.cache!.tags.length,
+    });
 
     const listIndex = this.cache!.lists.findIndex((l) => l.id === list.id);
     if (listIndex >= 0) {
@@ -150,6 +171,28 @@ class LocalTodoService implements TodoService {
   async deleteListById(id: string): Promise<void> {
     if (!this.cache) await this.load();
     this.cache!.lists = this.cache!.lists.filter((l) => l.id !== id);
+    await this.save(this.cache!);
+  }
+
+  async duplicateList(
+    id: string,
+    newList: TaskList,
+    newTasks: Task[],
+  ): Promise<void> {
+    if (!this.cache) await this.load();
+
+    const originalIndex = this.cache!.lists.findIndex((l) => l.id === id);
+    if (originalIndex >= 0) {
+      // Insert the duplicated list right after the original
+      this.cache!.lists.splice(originalIndex + 1, 0, newList);
+    } else {
+      // If original not found, just add at the end
+      this.cache!.lists.push(newList);
+    }
+
+    // Add all duplicated tasks
+    this.cache!.tasks.push(...newTasks);
+
     await this.save(this.cache!);
   }
 
@@ -251,6 +294,12 @@ class LocalTodoService implements TodoService {
   }
 
   private async save(data: TodoData): Promise<void> {
+    console.log("[LocalService] Saving data:", {
+      listsCount: data.lists.length,
+      tasksCount: data.tasks.length,
+      tagsCount: data.tags.length,
+    });
+
     const storage = getStorage();
 
     if (storage) {
@@ -352,13 +401,13 @@ class FirestoreTodoService implements TodoService {
       ]);
 
       const lists: TaskList[] = listsSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as TaskList),
+        (doc) => ({ id: doc.id, ...doc.data() }) as TaskList,
       );
       const tasks: Task[] = tasksSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Task),
+        (doc) => ({ id: doc.id, ...doc.data() }) as Task,
       );
       const tags: Tag[] = tagsSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Tag),
+        (doc) => ({ id: doc.id, ...doc.data() }) as Tag,
       );
 
       return { lists, tasks, tags };
@@ -489,6 +538,32 @@ class FirestoreTodoService implements TodoService {
     }
   }
 
+  async duplicateList(
+    _MOOD_PROFILESid: string,
+    newList: TaskList,
+    newTasks: Task[],
+  ): Promise<void> {
+    try {
+      // Use batch to save list + tasks atomically
+      const batch = writeBatch(db);
+
+      // Save the duplicated list
+      const { id: newListId, ...listData } = newList;
+      batch.set(doc(this.listsRef, newListId), removeUndefined(listData));
+
+      // Save all duplicated tasks
+      newTasks.forEach((task) => {
+        const { id: taskId, ...taskData } = task;
+        batch.set(doc(this.tasksRef, taskId), removeUndefined(taskData));
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Error duplicating list in Firestore:", error);
+      throw error;
+    }
+  }
+
   // === Granular Task operations ===
   async saveTask(task: Task): Promise<void> {
     try {
@@ -523,7 +598,7 @@ class FirestoreTodoService implements TodoService {
     }
   }
 
-  async duplicateTask(id: string, newTask: Task): Promise<void> {
+  async duplicateTask(_id: string, newTask: Task): Promise<void> {
     try {
       const { id: newId, ...data } = newTask;
       await setDoc(doc(this.tasksRef, newId), removeUndefined(data), {
@@ -589,29 +664,63 @@ class FirestoreTodoService implements TodoService {
    */
   subscribe(callback: (data: TodoData) => void): () => void {
     const data: TodoData = { lists: [], tasks: [], tags: [] };
+    const loadedCollections = { lists: false, tasks: false, tags: false };
 
-    const updateCallback = () => callback({ ...data });
+    const updateCallback = () => {
+      // Only call callback if ALL collections have loaded at least once
+      if (
+        loadedCollections.lists &&
+        loadedCollections.tasks &&
+        loadedCollections.tags
+      ) {
+        callback({ ...data });
+      }
+    };
 
-    const unsubLists = onSnapshot(this.listsRef, (snapshot) => {
-      data.lists = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as TaskList),
-      );
-      updateCallback();
-    });
+    // Only update from server data, not from cache
+    // This prevents restoring deleted items from stale offline cache
+    const unsubLists = onSnapshot(
+      this.listsRef,
+      { includeMetadataChanges: false },
+      (snapshot) => {
+        // Skip cached data to prevent deleted items from being restored
+        if (!snapshot.metadata.fromCache) {
+          data.lists = snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as TaskList,
+          );
+          loadedCollections.lists = true;
+          updateCallback();
+        }
+      },
+    );
 
-    const unsubTasks = onSnapshot(this.tasksRef, (snapshot) => {
-      data.tasks = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Task),
-      );
-      updateCallback();
-    });
+    const unsubTasks = onSnapshot(
+      this.tasksRef,
+      { includeMetadataChanges: false },
+      (snapshot) => {
+        if (!snapshot.metadata.fromCache) {
+          data.tasks = snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as Task,
+          );
+          loadedCollections.tasks = true;
+          updateCallback();
+        }
+      },
+    );
 
-    const unsubTags = onSnapshot(this.tagsRef, (snapshot) => {
-      data.tags = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Tag),
-      );
-      updateCallback();
-    });
+    const unsubTags = onSnapshot(
+      this.tagsRef,
+      { includeMetadataChanges: false },
+      (snapshot) => {
+        if (!snapshot.metadata.fromCache) {
+          data.tags = snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as Tag,
+          );
+          loadedCollections.tags = true;
+          updateCallback();
+        }
+      },
+    );
 
     this.unsubscribers = [unsubLists, unsubTasks, unsubTags];
 
@@ -710,6 +819,17 @@ class HybridTodoService implements TodoService {
     this.syncToCloud(() => this.firestoreService!.deleteListById(id));
   }
 
+  async duplicateList(
+    id: string,
+    newList: TaskList,
+    newTasks: Task[],
+  ): Promise<void> {
+    await this.localService.duplicateList(id, newList, newTasks);
+    this.syncToCloud(() =>
+      this.firestoreService!.duplicateList(id, newList, newTasks),
+    );
+  }
+
   // === Granular Task operations ===
   async saveTask(task: Task): Promise<void> {
     await this.localService.saveTask(task);
@@ -721,7 +841,9 @@ class HybridTodoService implements TodoService {
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ): Promise<void> {
     await this.localService.updateTaskFields(id, updates);
-    this.syncToCloud(() => this.firestoreService!.updateTaskFields(id, updates));
+    this.syncToCloud(() =>
+      this.firestoreService!.updateTaskFields(id, updates),
+    );
   }
 
   async deleteTaskById(id: string): Promise<void> {

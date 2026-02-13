@@ -27,7 +27,8 @@ import { ListFormModal } from "@molecules/toDo/ListFormModal";
 
 export const ManagementSidebar = () => {
   const { t } = useTranslation();
-  const { setSelectedTask, deleteList, addList, updateList } = useTodoStore();
+  const { setSelectedTask, deleteList, addList, updateList, duplicateList } =
+    useTodoStore();
   const { lists, selectedList, handleSelectList } = useTodo();
   const [isHoveringList, setIsHoveringList] = useState(false);
   const [hoveredListId, setHoveredListId] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export const ManagementSidebar = () => {
       ),
       value: ListActions.EDIT,
       onClick: () => {
-        setOpenDropdownId(null); // Close dropdown
+        setOpenDropdownId(null);
         setModalState({
           type: ModalType.EDIT,
           title: t("toDo.list.editTitle"),
@@ -68,6 +69,12 @@ export const ManagementSidebar = () => {
       value: ListActions.DUPLICATE,
       onClick: () => {
         setOpenDropdownId(null);
+        setModalState({
+          type: ModalType.DUPLICATE,
+          title: t("toDo.list.duplicateTitle", { listName: list.title }),
+          message: t("toDo.list.duplicateMessage"),
+          data: list,
+        });
       },
     },
     {
@@ -133,6 +140,14 @@ export const ManagementSidebar = () => {
     }
   };
 
+  const handleConfirmDuplicateList = async () => {
+    if (modalState.type === ModalType.DUPLICATE) {
+      const newListId = await duplicateList(modalState.data.id);
+      handleSelectList(newListId);
+      setModalState({ type: ModalType.NONE });
+    }
+  };
+
   return (
     <div className="w-[16%] h-full p-2 pr-4 border-r border-white/20">
       <div
@@ -180,21 +195,26 @@ export const ManagementSidebar = () => {
                         {list.title}
                       </Typography>
 
-                      <Dropdown
-                        data={getListActionData(list)}
-                        open={openDropdownId === list.id}
-                        onOpenChange={(open?: boolean) =>
-                          setOpenDropdownId(open ? list.id : null)
-                        }
+                      <div
+                        className="flex justify-center"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <motion.div
-                          initial="hidden"
-                          animate={isHovered ? "visible" : "hidden"}
-                          variants={fadeInOut}
+                        <Dropdown
+                          data={getListActionData(list)}
+                          open={openDropdownId === list.id}
+                          onOpenChange={(open?: boolean) =>
+                            setOpenDropdownId(open ? list.id : null)
+                          }
                         >
-                          <MoreIcon />
-                        </motion.div>
-                      </Dropdown>
+                          <motion.div
+                            initial="hidden"
+                            animate={isHovered ? "visible" : "hidden"}
+                            variants={fadeInOut}
+                          >
+                            <MoreIcon />
+                          </motion.div>
+                        </Dropdown>
+                      </div>
                     </div>
                   );
                 })}
@@ -231,17 +251,34 @@ export const ManagementSidebar = () => {
       />
 
       <ConfirmDialog
-        open={modalState.type === ModalType.DELETE}
+        open={
+          modalState.type === ModalType.DELETE ||
+          modalState.type === ModalType.DUPLICATE
+        }
         onOpenChange={(open) => {
           if (!open) {
             setModalState({ type: ModalType.NONE });
           }
         }}
-        title={modalState.type === ModalType.DELETE ? modalState.title : ""}
-        message={modalState.type === ModalType.DELETE ? modalState.message : ""}
+        title={
+          modalState.type === ModalType.DELETE ||
+          modalState.type === ModalType.DUPLICATE
+            ? modalState.title
+            : ""
+        }
+        message={
+          modalState.type === ModalType.DELETE ||
+          modalState.type === ModalType.DUPLICATE
+            ? modalState.message
+            : ""
+        }
         confirmText={t("toDo.detail.deleteConfirm.confirm")}
         cancelText={t("toDo.detail.deleteConfirm.cancel")}
-        onConfirm={handleConfirmDeleteList}
+        onConfirm={
+          modalState.type === ModalType.DELETE
+            ? handleConfirmDeleteList
+            : handleConfirmDuplicateList
+        }
         variant="danger"
       />
     </div>

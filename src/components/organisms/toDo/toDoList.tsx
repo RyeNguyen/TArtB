@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DndContext,
@@ -100,7 +100,7 @@ interface ToDoListProps {
 
 export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
   const { t, i18n } = useTranslation();
-  const { groupedTasks, handleToggleTask, handleReorderTask } = useTodo();
+  const { groupedTasks, handleToggleTask, handleReorderTask, selectedList } = useTodo();
   const {
     selectedTaskId,
     setSelectedTask,
@@ -113,6 +113,14 @@ export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
   const [_, setActiveTask] = useState<Task | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [overGroupId, setOverGroupId] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll position when selected list changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [selectedList?.id]);
 
   // Configure sensors with distance activation
   const sensors = useSensors(
@@ -300,7 +308,7 @@ export const ToDoList = ({ isFocusMode = false }: ToDoListProps) => {
     activeGroupId !== overGroupId;
 
   return (
-    <div className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain">
+    <div ref={scrollContainerRef} className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain">
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}

@@ -47,6 +47,7 @@ interface TodoStore {
     updates: Partial<Omit<TaskList, "id" | "createdAt">>,
   ) => Promise<void>;
   deleteList: (id: string) => Promise<void>;
+  duplicateList: (id: string) => Promise<string>;
   reorderList: (id: string, newOrder: number) => Promise<void>;
   searchList: (searchTerm: string) => Promise<TaskList[]>;
 
@@ -339,6 +340,63 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       throw error;
     } finally {
       setLoading("isDeletingList", false);
+    }
+  },
+
+  duplicateList: async (id) => {
+    const { lists, tasks } = get();
+    const previousLists = lists;
+    const previousTasks = tasks;
+
+    try {
+      const originalList = lists.find((list) => list.id === id);
+      if (!originalList) {
+        throw new Error(`List with id ${id} not found`);
+      }
+
+      const now = Date.now();
+      const newListId = generateId();
+
+      // Get max order for new list
+      const maxOrder =
+        lists.length > 0 ? Math.max(...lists.map((l) => l.order)) : -1;
+
+      // Create new list with localized "Copy of" prefix
+      const newList: TaskList = {
+        ...originalList,
+        id: newListId,
+        title: i18next.t("toDo.list.copyOf", { listName: originalList.title }),
+        order: maxOrder + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      // Get all tasks from the original list
+      const originalTasks = tasks.filter((task) => task.listId === id);
+
+      // Create duplicates of all tasks with new IDs
+      const newTasks: Task[] = originalTasks.map((task) => ({
+        ...task,
+        id: generateId(),
+        listId: newListId,
+        createdAt: now,
+        updatedAt: now,
+      }));
+
+      // Optimistic update
+      set({
+        lists: [...lists, newList],
+        tasks: [...tasks, ...newTasks],
+      });
+
+      // Persist to backend
+      await todoService.duplicateList(id, newList, newTasks);
+
+      return newListId;
+    } catch (error) {
+      set({ lists: previousLists, tasks: previousTasks });
+      console.error("[TodoStore] Error duplicating list:", error);
+      throw error;
     }
   },
 

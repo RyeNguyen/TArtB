@@ -84,4 +84,5 @@ export enum ModalType {
   EDIT = "edit",
   DELETE = "delete",
   NOTIFY = "notify",
+  DUPLICATE = "duplicate",
 }
