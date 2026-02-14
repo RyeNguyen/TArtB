@@ -775,11 +775,14 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
     try {
       const now = Date.now();
+      const maxOrder =
+        tags.length > 0 ? Math.max(...tags.map((t) => t.order)) : -1;
 
       const newTag: Tag = {
         id: generateId(),
         title,
         color,
+        order: maxOrder + 1,
         createdAt: now,
         updatedAt: now,
       };

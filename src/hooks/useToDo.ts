@@ -5,7 +5,7 @@ import { useTodoStore } from "@stores/todoStore";
 import { useSettingsStore } from "@stores/settingsStore";
 import { useToastStore } from "@stores/toastStore";
 import { WidgetId, TaskSortBy, TaskPriorityType } from "@constants/common";
-import { Tag, TaskList } from "@/types/toDo";
+import { Tag, Task, TaskList } from "@/types/toDo";
 import { sortTasks } from "@utils/toDo/taskSortUtils";
 import { groupTasks } from "@utils/toDo/taskGroupUtils";
 import {
@@ -21,9 +21,9 @@ export const useTodo = () => {
   const { settings, updateSettings } = useSettingsStore();
   const { addToast } = useToastStore();
   const {
-    lists,
+    lists: unsortedLists,
     tasks,
-    tags,
+    tags: unsortedTags,
     isLoaded,
     isSyncing,
     hasInitializedDefaultList,
@@ -42,6 +42,16 @@ export const useTodo = () => {
 
   const toDoSettings = settings.widgets[WidgetId.TODO];
   const selectedListId = toDoSettings.selectedListId;
+
+  // Sort lists by order
+  const lists = useMemo(() => {
+    return [...unsortedLists].sort((a, b) => a.order - b.order);
+  }, [unsortedLists]);
+
+  // Sort tags by order
+  const tags = useMemo(() => {
+    return [...unsortedTags].sort((a, b) => a.order - b.order);
+  }, [unsortedTags]);
 
   const [inputValue, setInputValue] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -160,11 +170,22 @@ export const useTodo = () => {
   }, [toDoSettings.sortBy]);
 
   const filteredTasks = useMemo(() => {
-    if (!selectedListId) return [];
-    const result = getTasksByList(selectedListId);
+    let result: Task[];
+
+    // Tag filter takes priority - shows tasks across ALL lists
+    if (toDoSettings.selectedTagId) {
+      result = tasks.filter((task) =>
+        task.tags?.includes(toDoSettings.selectedTagId!)
+      );
+    } else {
+      // List filter - shows tasks from selected list
+      if (!selectedListId) return [];
+      result = getTasksByList(selectedListId);
+    }
+
     return sortTasks(result, toDoSettings.sortBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedListId, tasks, toDoSettings.sortBy, getTasksByList]);
+  }, [selectedListId, tasks, toDoSettings.sortBy, toDoSettings.selectedTagId, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
     return groupTasks(filteredTasks, toDoSettings.groupBy, t, { tags });

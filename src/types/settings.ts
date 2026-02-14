@@ -34,6 +34,7 @@ export interface ArtworkInfoWidgetState extends BaseWidgetState {}
 
 export interface ToDoWidgetState extends BaseWidgetState {
   selectedListId: string | null;
+  selectedTagId: string | null;
   sortBy: TaskSortBy;
   groupBy: TaskGroupBy;
 }
@@ -94,6 +95,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
       visible: true,
       focused: false,
       selectedListId: null,
+      selectedTagId: null,
       sortBy: TaskSortBy.MANUAL,
       groupBy: TaskGroupBy.NONE,
     },

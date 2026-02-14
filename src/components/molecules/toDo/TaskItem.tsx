@@ -4,7 +4,7 @@ import { Typography } from "@atoms/Typography";
 import { Popover, PopoverTrigger, PopoverContent } from "@atoms/Popover";
 import { TaskPriorityType } from "@constants/common";
 import { PRIORITY_COLORS } from "@constants/toDoConfig";
-import { TaskDetail } from "../../organisms/toDo/TaskDetail";
+import { CompactTaskDetail } from "../../organisms/toDo/compactMode/CompactTaskDetail";
 import { Checkbox } from "@atoms/Checkbox";
 import { getDeadlineColor } from "@utils/dateUtils";
 import DragListIcon from "@icons/DragList";
@@ -136,7 +136,7 @@ export const TaskItem = ({
     <Popover open={isOpen} onOpenChange={onOpenChange}>
       {taskContent}
       <PopoverContent className="p-3">
-        <TaskDetail task={task} onClose={() => onOpenChange(false)} />
+        <CompactTaskDetail task={task} onClose={() => onOpenChange(false)} />
       </PopoverContent>
     </Popover>
   );

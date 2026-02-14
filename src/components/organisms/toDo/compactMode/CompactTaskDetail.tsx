@@ -26,18 +26,21 @@ import { getDeadlineColor } from "@utils/dateUtils";
 import DeleteIcon from "@icons/Delete";
 import { useConfetti } from "@organisms/toDo/ToDo";
 import MoreIcon from "@icons/More";
-import { SubtaskSection } from "./SubtaskSection";
+import { SubtaskSection } from "../SubtaskSection";
 import { TagDisplay } from "@molecules/toDo/TagDisplay";
 import { PrioritySelector } from "@molecules/toDo/PrioritySelector";
 import DuplicateIcon from "@icons/Duplicate";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
-interface TaskDetailProps {
+interface CompactTaskDetailProps {
   task: Task;
   onClose: () => void;
 }
 
-export const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
+export const CompactTaskDetail = ({
+  task,
+  onClose,
+}: CompactTaskDetailProps) => {
   const { t, i18n } = useTranslation();
   const { updateTask, deleteTask, duplicateTask, toggleTask, moveTaskToList } =
     useTodoStore();

@@ -40,6 +40,7 @@ export interface Tag {
   id: string;
   title: string;
   color?: string;
+  order: number;
   createdAt: number;
   updatedAt: number;
 }

@@ -1,18 +1,21 @@
 import { IconProps } from "../../types";
 
-const DragListIcon = ({ color = "#FFF", size = 24, ...props }: IconProps) => (
+const DragListIcon = ({ color = "#FFF", size = 24 }: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    viewBox="-0.8 -0.8 24 24"
     fill="none"
-    viewBox="0 0 24 24"
-    {...props}
+    stroke={color}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    id="Arrows-Move-Vertical--Streamline-Tabler"
+    height={size}
+    width={size}
   >
-    <path
-      fill={color}
-      d="M11.99 1.75a.75.75 0 0 0-.52.22l-2.5 2.5a.75.75 0 1 0 1.06 1.06L12 3.56l1.97 1.97a.75.75 0 1 0 1.06-1.06l-2.5-2.5a.75.75 0 0 0-.54-.22m-9.24 6a.75.75 0 1 0 0 1.5h18.5a.75.75 0 1 0 0-1.5zm0 3.5a.751.751 0 1 0 0 1.5h18.5a.751.751 0 1 0 0-1.5zm0 3.5a.751.751 0 1 0 0 1.5h18.5a.751.751 0 1 0 0-1.5zm11.743 3.49a.75.75 0 0 0-.523.23L12 20.44l-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 0 0-.537-1.29"
-    />
+    <path d="m8.4 16.8 2.8 2.8 2.8 -2.8" stroke-width="1.6"></path>
+    <path d="M11.2 14v5.6" stroke-width="1.6"></path>
+    <path d="m14 5.6 -2.8 -2.8 -2.8 2.8" stroke-width="1.6"></path>
+    <path d="M11.2 2.8v5.6" stroke-width="1.6"></path>
   </svg>
 );
 

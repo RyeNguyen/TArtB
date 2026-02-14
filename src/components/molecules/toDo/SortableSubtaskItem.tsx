@@ -58,7 +58,7 @@ export const SortableSubtaskItem = ({
         className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity"
         style={{ touchAction: "none" }}
       >
-        <DragListIcon size={16} />
+        <DragListIcon />
       </div>
 
       <Checkbox

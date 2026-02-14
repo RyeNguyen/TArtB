@@ -10,7 +10,12 @@ import { ToDoList } from "@organisms/toDo/toDoList";
 import { Panel, Group } from "react-resizable-panels";
 
 export const ToDoFocusMode = () => {
-  const { selectedList } = useTodo();
+  const { selectedList, tags, toDoSettings } = useTodo();
+
+  // Get the selected tag if filtering by tag
+  const selectedTag = toDoSettings.selectedTagId
+    ? tags.find(t => t.id === toDoSettings.selectedTagId)
+    : null;
 
   return (
     <div className="flex w-full h-full overflow-hidden rounded-b-2xl">
@@ -32,7 +37,7 @@ export const ToDoFocusMode = () => {
           >
             <div className="flex items-center justify-between shrink-0">
               <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
-                {selectedList?.title}
+                {selectedTag ? `# ${selectedTag.title}` : selectedList?.title}
               </Typography>
 
               <ToDoFilter />
