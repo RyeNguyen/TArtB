@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useTodoStore } from "@stores/todoStore";
 import { useSettingsStore } from "@stores/settingsStore";
 import { useToastStore } from "@stores/toastStore";
-import { WidgetId, TaskSortBy, TaskPriorityType } from "@constants/common";
+import { WidgetId, TaskSortBy, TaskPriorityType, DateFilter } from "@constants/common";
 import { Tag, Task, TaskList } from "@/types/toDo";
 import { sortTasks } from "@utils/toDo/taskSortUtils";
 import { groupTasks } from "@utils/toDo/taskGroupUtils";
@@ -172,20 +172,48 @@ export const useTodo = () => {
   const filteredTasks = useMemo(() => {
     let result: Task[];
 
-    // Tag filter takes priority - shows tasks across ALL lists
-    if (toDoSettings.selectedTagId) {
+    // Special views take priority
+    if (toDoSettings.showDeleted) {
+      // Show only deleted tasks (soft-deleted, can be restored)
+      result = tasks.filter((task) => task.deletedAt);
+    } else if (toDoSettings.showCompleted) {
+      // Show only completed tasks (excluding deleted)
+      result = tasks.filter((task) => task.isCompleted && !task.deletedAt);
+    } else if (selectedListId && toDoSettings.selectedListId) {
+      // List filter - shows tasks from selected list (excluding deleted)
+      result = getTasksByList(selectedListId).filter((task) => !task.deletedAt);
+    } else if (toDoSettings.selectedTagId) {
+      // Tag filter - shows tasks across ALL lists (excluding deleted)
       result = tasks.filter((task) =>
-        task.tags?.includes(toDoSettings.selectedTagId!)
+        task.tags?.includes(toDoSettings.selectedTagId!) && !task.deletedAt
       );
+    } else if (toDoSettings.dateFilter === DateFilter.ALL) {
+      // Show ALL tasks from ALL lists (excluding deleted)
+      result = tasks.filter((task) => !task.deletedAt);
     } else {
-      // List filter - shows tasks from selected list
-      if (!selectedListId) return [];
-      result = getTasksByList(selectedListId);
+      // Date filter (TODAY or NEXT_7_DAYS) - shows tasks across ALL lists (excluding deleted)
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const endOfToday = startOfToday + 24 * 60 * 60 * 1000 - 1;
+      const endOf7Days = startOfToday + 7 * 24 * 60 * 60 * 1000 - 1;
+
+      result = tasks.filter((task) => {
+        if (task.deletedAt) return false;
+        if (!task.deadline) return false;
+
+        if (toDoSettings.dateFilter === DateFilter.TODAY) {
+          return task.deadline >= startOfToday && task.deadline <= endOfToday;
+        } else if (toDoSettings.dateFilter === DateFilter.NEXT_7_DAYS) {
+          return task.deadline >= startOfToday && task.deadline <= endOf7Days;
+        }
+
+        return true;
+      });
     }
 
     return sortTasks(result, toDoSettings.sortBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedListId, tasks, toDoSettings.sortBy, toDoSettings.selectedTagId, getTasksByList]);
+  }, [selectedListId, tasks, toDoSettings.sortBy, toDoSettings.selectedTagId, toDoSettings.dateFilter, toDoSettings.selectedListId, toDoSettings.showCompleted, toDoSettings.showDeleted, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
     return groupTasks(filteredTasks, toDoSettings.groupBy, t, { tags });

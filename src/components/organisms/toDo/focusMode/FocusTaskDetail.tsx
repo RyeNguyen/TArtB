@@ -25,9 +25,9 @@ import { SubtaskSection } from "@organisms/toDo/SubtaskSection";
 import { Dropdown } from "@atoms/Dropdown";
 import { useTodo } from "@hooks/useToDo";
 import MoreIcon from "@icons/More";
-import GroupIcon from "@icons/Group";
 import DeleteIcon from "@icons/Delete";
 import { ConfirmDialog } from "@atoms/ConfirmDialog";
+import DuplicateIcon from "@icons/Duplicate";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -170,7 +170,7 @@ export const FocusTaskDetail = () => {
     {
       label: (
         <div className="flex items-center gap-2">
-          <GroupIcon />
+          <DuplicateIcon />
           <Typography className="text-white">
             {t("toDo.action.duplicate")}
           </Typography>
@@ -281,7 +281,12 @@ export const FocusTaskDetail = () => {
               header={t("toDo.detail.moveTo")}
               data={listsData}
             >
-              <Button type="button" text={selectedList?.title} isGhost />
+              <Button
+                type="button"
+                text={selectedList?.title}
+                isGhost
+                className="max-w-40"
+              />
             </Dropdown>
 
             <Dropdown data={otherActionsData}>

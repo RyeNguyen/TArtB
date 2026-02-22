@@ -1,5 +1,6 @@
 import {
   ClockType,
+  DateFilter,
   FieldType,
   Language,
   TaskGroupBy,
@@ -35,8 +36,11 @@ export interface ArtworkInfoWidgetState extends BaseWidgetState {}
 export interface ToDoWidgetState extends BaseWidgetState {
   selectedListId: string | null;
   selectedTagId: string | null;
+  dateFilter: DateFilter;
   sortBy: TaskSortBy;
   groupBy: TaskGroupBy;
+  showCompleted: boolean;
+  showDeleted: boolean;
 }
 
 export interface WidgetStates {
@@ -96,8 +100,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
       focused: false,
       selectedListId: null,
       selectedTagId: null,
+      dateFilter: DateFilter.ALL,
       sortBy: TaskSortBy.MANUAL,
       groupBy: TaskGroupBy.NONE,
+      showCompleted: false,
+      showDeleted: false,
     },
   },
   artwork: {

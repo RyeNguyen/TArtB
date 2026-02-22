@@ -67,6 +67,12 @@ export enum TaskGroupBy {
   DUE_DATE = "dueDate",
 }
 
+export enum DateFilter {
+  ALL = "all",
+  TODAY = "today",
+  NEXT_7_DAYS = "next7Days",
+}
+
 export enum OtherTaskActions {
   DUPLICATE = "duplicate",
   DELETE = "delete",

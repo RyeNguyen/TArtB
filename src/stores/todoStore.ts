@@ -66,7 +66,9 @@ interface TodoStore {
     id: string,
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ) => Promise<void>;
-  deleteTask: (id: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>; // Soft delete (sets deletedAt)
+  restoreTask: (id: string) => Promise<void>; // Restore deleted task
+  permanentDeleteTask: (id: string) => Promise<void>; // Hard delete (remove from array)
   duplicateTask: (id: string) => Promise<void>;
   toggleTask: (id: string) => Promise<void>;
   reorderTask: (id: string, newOrder: number) => Promise<void>;
@@ -82,6 +84,10 @@ interface TodoStore {
 
   // Tag actions
   addTag: (title: string, color?: string) => Promise<string>;
+  updateTag: (
+    id: string,
+    updates: Partial<Omit<Tag, "id" | "createdAt">>,
+  ) => Promise<void>;
   searchTag: (searchTerm: string) => Promise<Tag[]>;
   deleteTag: (id: string) => Promise<void>;
 
@@ -508,6 +514,59 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
   deleteTask: async (id) => {
     const { tasks, setLoading } = get();
     const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    setLoading("isDeletingTask", true);
+
+    try {
+      const now = Date.now();
+      const deletedTask = { ...task, deletedAt: now, updatedAt: now };
+      set({ tasks: tasks.map((t) => (t.id === id ? deletedTask : t)) });
+      await todoService.saveTask(deletedTask);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error soft-deleting task:", error);
+      throw error;
+    } finally {
+      setLoading("isDeletingTask", false);
+    }
+  },
+
+  restoreTask: async (id) => {
+    const { tasks, lists, setLoading } = get();
+    const previousTasks = tasks;
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    setLoading("isUpdatingTask", true);
+
+    try {
+      const now = Date.now();
+      // Check if original list still exists
+      const listExists = lists.some((l) => l.id === task.listId);
+
+      let restoredTask = { ...task, deletedAt: undefined, updatedAt: now };
+
+      // If original list is gone, move to first available list
+      if (!listExists && lists.length > 0) {
+        restoredTask.listId = lists[0].id;
+      }
+
+      set({ tasks: tasks.map((t) => (t.id === id ? restoredTask : t)) });
+      await todoService.saveTask(restoredTask);
+    } catch (error) {
+      set({ tasks: previousTasks });
+      console.error("[TodoStore] Error restoring task:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingTask", false);
+    }
+  },
+
+  permanentDeleteTask: async (id) => {
+    const { tasks, setLoading } = get();
+    const previousTasks = tasks;
 
     setLoading("isDeletingTask", true);
 
@@ -516,7 +575,7 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       await todoService.deleteTaskById(id);
     } catch (error) {
       set({ tasks: previousTasks });
-      console.error("[TodoStore] Error deleting task:", error);
+      console.error("[TodoStore] Error permanently deleting task:", error);
       throw error;
     } finally {
       setLoading("isDeletingTask", false);
@@ -794,6 +853,27 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
       set({ tags: previousTags });
       console.error("[TodoStore] Error adding tag:", error);
       throw error;
+    }
+  },
+
+  updateTag: async (id, updates) => {
+    const { tags, setLoading } = get();
+    const previousTags = tags;
+    const updatedTag = tags.find((tag) => tag.id === id);
+    if (!updatedTag) return;
+
+    setLoading("isUpdatingTask", true);
+
+    try {
+      const newTag = { ...updatedTag, ...updates, updatedAt: Date.now() };
+      set({ tags: tags.map((tag) => (tag.id === id ? newTag : tag)) });
+      await todoService.saveTag(newTag);
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error updating tag:", error);
+      throw error;
+    } finally {
+      setLoading("isUpdatingTask", false);
     }
   },
 

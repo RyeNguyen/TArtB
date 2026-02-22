@@ -33,7 +33,7 @@ export const Button = ({
     <button
       className={`flex items-center justify-center border gap-2 rounded-2xl cursor-pointer transition-all duration-200
         hover:scale-105
-        active:scale-95 bg-white border-transparent ${Icon && !text ? "p-1" : "px-2 py-0.5"} ${isOutline ? "bg-transparent! border-white!" : ""}
+        active:scale-95 bg-white border-transparent min-w-0 ${Icon && !text ? "p-1" : "px-2 py-0.5"} ${isOutline ? "bg-transparent! border-white!" : ""}
         ${isGhost ? "bg-transparent! hover:bg-white/40!" : ""} ${className}`}
       {...props}
     >
@@ -41,7 +41,7 @@ export const Button = ({
       {text && (
         <Typography
           variant={textVariant}
-          className={`${isOutline || isGhost ? "text-white!" : ""} ${textClassName}`}
+          className={`${isOutline || isGhost ? "text-white!" : ""} ${textClassName} truncate`}
           style={textStyle}
         >
           {text}

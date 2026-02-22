@@ -102,6 +102,7 @@
       "none": "None"
     },
     "list": {
+      "title": "Lists",
       "searchPlaceholder": "Search list...",
       "createNew": "Create new list {{listName}}",
       "deleteTitle": "Delete list {{listName}}",
@@ -118,8 +119,18 @@
       "save": "Save Changes"
     },
     "tag": {
+      "title": "Tags",
       "searchPlaceholder": "Search tag...",
       "createNew": "Create new tag {{tagName}}",
+      "deleteTitle": "Delete tag {{tagName}}",
+      "deleteMessage": "This tag will be removed from all tasks.",
+      "addTitle": "Add New Tag",
+      "editTitle": "Edit Tag",
+      "name": "Tag Name",
+      "namePlaceholder": "Enter tag name...",
+      "color": "Color",
+      "add": "Add Tag",
+      "save": "Save Changes",
       "none": "None"
     },
     "sortBy": {
@@ -145,6 +156,11 @@
       "upcoming": "Upcoming",
       "noDate": "No Date",
       "noTags": "No Tags"
+    },
+    "dateFilter": {
+      "all": "All",
+      "today": "Today",
+      "next7Days": "Next 7 Days"
     },
     "completed": "Completed",
     "deadline": {

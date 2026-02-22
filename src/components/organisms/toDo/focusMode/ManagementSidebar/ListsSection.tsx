@@ -6,26 +6,30 @@ import {
 } from "@atoms/Accordion";
 import { Button } from "@atoms/button/Button";
 import { Typography } from "@atoms/Typography";
+import { ConfirmDialog } from "@atoms/ConfirmDialog";
 import { COLORS } from "@constants/colors";
-import { ListActions, ModalType, TypoVariants, WidgetId } from "@constants/common";
-import { useTodo } from "@hooks/useToDo";
-import MoreIcon from "@icons/More";
+import {
+  ListActions,
+  ModalType,
+  TypoVariants,
+  WidgetId,
+} from "@constants/common";
 import PlusIcon from "@icons/Plus";
-import { useTodoStore } from "@stores/todoStore";
-import { useSettingsStore } from "@stores/settingsStore";
+import EditIcon from "@icons/Edit";
+import DuplicateIcon from "@icons/Duplicate";
+import DeleteIcon from "@icons/Delete";
 import { motion } from "framer-motion";
 import { fadeInOut } from "@animations/hover";
 import React, { useState } from "react";
-import DeleteIcon from "@icons/Delete";
 import { useTranslation } from "react-i18next";
-import DuplicateIcon from "@icons/Duplicate";
-import { Dropdown } from "@atoms/Dropdown";
-import EditIcon from "@icons/Edit";
-import { ConfirmDialog } from "@atoms/ConfirmDialog";
 import { TaskList } from "@/types/toDo";
 import { ModalState } from "@/types/common";
 import { ListFormModal } from "@molecules/toDo/ListFormModal";
-import DragListIcon from "@icons/DragList";
+import { useTodoStore } from "@stores/todoStore";
+import { useSettingsStore } from "@stores/settingsStore";
+import { useTodo } from "@hooks/useToDo";
+import { todoService } from "@services/todo/todoService";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   DndContext,
   closestCenter,
@@ -37,177 +41,24 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { todoService } from "@services/todo/todoService";
-import { Tag } from "@/types/toDo";
+import { SortableListItem } from "./components/SortableListItem";
 
-interface SortableTagItemProps {
-  tag: Tag;
-  isSelected: boolean;
-  isHovered: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  onClick: () => void;
-}
-
-const SortableTagItem = ({
-  tag,
-  isSelected,
-  isHovered,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
-}: SortableTagItemProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: tag.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      className={`p-1 rounded-xl flex items-center justify-between gap-2 hover:bg-white/10 cursor-pointer ${isSelected ? "bg-white/20" : ""}`}
-    >
-      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-        <motion.div
-          initial="hidden"
-          animate={isHovered ? "visible" : "hidden"}
-          variants={fadeInOut}
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing"
-        >
-          <DragListIcon />
-        </motion.div>
-
-        <Typography className="text-text-color truncate">
-          {tag.title}
-        </Typography>
-      </div>
-    </div>
-  );
-};
-
-interface SortableListItemProps {
-  list: TaskList;
-  isSelected: boolean;
-  isHovered: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  onClick: () => void;
-  onMoreClick: (e: React.MouseEvent) => void;
-  getListActionData: (list: TaskList) => any[];
-  openDropdownId: string | null;
-  setOpenDropdownId: (id: string | null) => void;
-}
-
-const SortableListItem = ({
-  list,
-  isSelected,
-  isHovered,
-  onMouseEnter,
-  onMouseLeave,
-  onClick,
-  onMoreClick,
-  getListActionData,
-  openDropdownId,
-  setOpenDropdownId,
-}: SortableListItemProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: list.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      className={`p-1 rounded-xl flex items-center justify-between gap-2 cursor-pointer hover:bg-white/10! ${isSelected ? "bg-white/20" : ""}`}
-    >
-      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-        <motion.div
-          initial="hidden"
-          animate={isHovered ? "visible" : "hidden"}
-          variants={fadeInOut}
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing"
-        >
-          <DragListIcon />
-        </motion.div>
-
-        <Typography className="text-text-color truncate">
-          {list.title}
-        </Typography>
-      </div>
-
-      <div className="flex justify-center" onClick={onMoreClick}>
-        <Dropdown
-          data={getListActionData(list)}
-          open={openDropdownId === list.id}
-          onOpenChange={(open?: boolean) =>
-            setOpenDropdownId(open ? list.id : null)
-          }
-        >
-          <motion.div
-            initial="hidden"
-            animate={isHovered ? "visible" : "hidden"}
-            variants={fadeInOut}
-          >
-            <MoreIcon />
-          </motion.div>
-        </Dropdown>
-      </div>
-    </div>
-  );
-};
-
-export const ManagementSidebar = () => {
+export const ListsSection = () => {
   const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   const {
     lists: storeLists,
-    tags: storeTags,
     setSelectedTask,
     deleteList,
     addList,
     updateList,
     duplicateList,
   } = useTodoStore();
-  const { lists, tags, selectedList, toDoSettings } = useTodo();
+  const { lists, selectedList } = useTodo();
+  const toDoSettings = settings.widgets[WidgetId.TODO];
   const [isHoveringList, setIsHoveringList] = useState(false);
   const [hoveredListId, setHoveredListId] = useState<string | null>(null);
-  const [hoveredTagId, setHoveredTagId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<ModalState<TaskList>>({
     type: ModalType.NONE,
@@ -221,6 +72,24 @@ export const ManagementSidebar = () => {
       },
     }),
   );
+
+  const onSelectList = (listId: string) => {
+    if (listId === selectedList?.id && !toDoSettings.selectedTagId) return;
+    setSelectedTask(null);
+    // Clear tag, completed, and deleted filters when selecting a list
+    updateSettings({
+      widgets: {
+        ...settings.widgets,
+        [WidgetId.TODO]: {
+          ...toDoSettings,
+          selectedTagId: null,
+          selectedListId: listId,
+          showCompleted: false,
+          showDeleted: false,
+        },
+      },
+    });
+  };
 
   const getListActionData = (list: TaskList) => [
     {
@@ -283,37 +152,6 @@ export const ManagementSidebar = () => {
       },
     },
   ];
-
-  const onSelectList = (listId: string) => {
-    if (listId === selectedList?.id && !toDoSettings.selectedTagId) return;
-    setSelectedTask(null);
-    // Clear tag filter and select list in a single update to avoid race condition
-    updateSettings({
-      widgets: {
-        ...settings.widgets,
-        [WidgetId.TODO]: {
-          ...toDoSettings,
-          selectedTagId: null,
-          selectedListId: listId,
-        },
-      },
-    });
-  };
-
-  const onSelectTag = (tagId: string) => {
-    setSelectedTask(null);
-    // Clear list selection and select tag in a single update
-    updateSettings({
-      widgets: {
-        ...settings.widgets,
-        [WidgetId.TODO]: {
-          ...toDoSettings,
-          selectedListId: null,
-          selectedTagId: tagId,
-        },
-      },
-    });
-  };
 
   const handleAddList = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -387,59 +225,25 @@ export const ManagementSidebar = () => {
       } catch (error) {
         // Revert on error
         useTodoStore.setState({ lists: storeLists });
-        console.error("[ManagementSidebar] Error reordering lists:", error);
-      }
-    }
-  };
-
-  const handleDragEndTag = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = tags.findIndex((tag) => tag.id === active.id);
-    const newIndex = tags.findIndex((tag) => tag.id === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-      // Use arrayMove to reorder the tags array
-      const reorderedTags = arrayMove(tags, oldIndex, newIndex);
-
-      // Update order values to match new positions
-      const now = Date.now();
-      const tagsWithNewOrders = reorderedTags.map((tag, index) => ({
-        ...tag,
-        order: index,
-        updatedAt: now,
-      }));
-
-      // Optimistically update local state
-      useTodoStore.setState({ tags: tagsWithNewOrders });
-
-      try {
-        // Save all tags with new orders
-        await todoService.saveTags(tagsWithNewOrders);
-      } catch (error) {
-        // Revert on error
-        useTodoStore.setState({ tags: storeTags });
-        console.error("[ManagementSidebar] Error reordering tags:", error);
+        console.error("[ListsSection] Error reordering lists:", error);
       }
     }
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div
-        onMouseEnter={() => setIsHoveringList(true)}
-        onMouseLeave={() => setIsHoveringList(false)}
-      >
-        <div className="p-2">
+    <>
+      <div className="p-2">
+        <div
+          onMouseEnter={() => setIsHoveringList(true)}
+          onMouseLeave={() => setIsHoveringList(false)}
+        >
           <Accordion>
             <AccordionItem id="lists">
               <AccordionTrigger id="lists">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Typography variant={TypoVariants.SUBTITLE}>
-                      List
+                      {t("toDo.list.title")}
                     </Typography>
                     <div className="flex items-center gap-1 px-2 rounded-full bg-white/20 text-sz-small text-white/80">
                       {lists.length}
@@ -475,7 +279,10 @@ export const ManagementSidebar = () => {
                         <SortableListItem
                           key={list.id}
                           list={list}
-                          isSelected={!toDoSettings.selectedTagId && selectedList?.id === list.id}
+                          isSelected={
+                            !toDoSettings.selectedTagId &&
+                            selectedList?.id === list.id
+                          }
                           isHovered={hoveredListId === list.id}
                           onMouseEnter={() => setHoveredListId(list.id)}
                           onMouseLeave={() => setHoveredListId(null)}
@@ -489,70 +296,6 @@ export const ManagementSidebar = () => {
                     </div>
                   </SortableContext>
                 </DndContext>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-
-        <div className="p-2">
-          <Accordion>
-            <AccordionItem id="tags">
-              <AccordionTrigger id="tags">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Typography variant={TypoVariants.SUBTITLE}>
-                      Tags
-                    </Typography>
-                    <div className="flex items-center gap-1 px-2 rounded-full bg-white/20 text-sz-small text-white/80">
-                      {tags.length}
-                    </div>
-                  </div>
-
-                  <motion.div
-                    initial="hidden"
-                    animate={isHoveringList ? "visible" : "hidden"}
-                    variants={fadeInOut}
-                  >
-                    <Button
-                      icon={PlusIcon}
-                      iconColor={COLORS.WHITE}
-                      isGhost
-                      onClick={() => {}}
-                    />
-                  </motion.div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent id="tags">
-                {tags.length === 0 ? (
-                  <Typography className="text-white/50 text-sz-small text-center py-2">
-                    {t("toDo.tag.none")}
-                  </Typography>
-                ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEndTag}
-                  >
-                    <SortableContext
-                      items={tags.map((t) => t.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="flex flex-col gap-1 mt-2">
-                        {tags.map((tag) => (
-                          <SortableTagItem
-                            key={tag.id}
-                            tag={tag}
-                            isSelected={toDoSettings.selectedTagId === tag.id}
-                            isHovered={hoveredTagId === tag.id}
-                            onMouseEnter={() => setHoveredTagId(tag.id)}
-                            onMouseLeave={() => setHoveredTagId(null)}
-                            onClick={() => onSelectTag(tag.id)}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                )}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -616,6 +359,6 @@ export const ManagementSidebar = () => {
         }
         variant="danger"
       />
-    </div>
+    </>
   );
 };

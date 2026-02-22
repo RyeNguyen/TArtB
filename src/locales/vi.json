@@ -89,6 +89,7 @@
       "title": "Độ ưu tiên"
     },
     "list": {
+      "title": "Danh sách",
       "searchPlaceholder": "Tìm danh sách...",
       "createNew": "Tạo mới danh sách {{listName}}",
       "deleteTitle": "Xóa danh sách {{listName}}",
@@ -105,8 +106,18 @@
       "save": "Lưu Thay Đổi"
     },
     "tag": {
+      "title": "Nhãn",
       "searchPlaceholder": "Tìm kiếm nhãn...",
       "createNew": "Tạo nhãn mới {{tagName}}",
+      "deleteTitle": "Xóa nhãn {{tagName}}",
+      "deleteMessage": "Nhãn này sẽ được gỡ bỏ khỏi tất cả các công việc.",
+      "addTitle": "Thêm Nhãn Mới",
+      "editTitle": "Chỉnh Sửa Nhãn",
+      "name": "Tên Nhãn",
+      "namePlaceholder": "Nhập tên nhãn...",
+      "color": "Màu",
+      "add": "Thêm Nhãn",
+      "save": "Lưu Thay Đổi",
       "none": "Không"
     },
     "inputPlaceholder": "Bạn muốn làm gì?",
@@ -135,6 +146,11 @@
       "upcoming": "Sắp tới",
       "noDate": "Không có hạn",
       "noTags": "Không có nhãn"
+    },
+    "dateFilter": {
+      "all": "Tất cả",
+      "today": "Hôm nay",
+      "next7Days": "7 Ngày Tới"
     },
     "completed": "Hoàn thành",
     "deadline": {

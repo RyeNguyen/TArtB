@@ -259,7 +259,12 @@ export const CompactTaskDetail = ({
           header={t("toDo.detail.moveTo")}
           data={listsData}
         >
-          <Button type="button" text={selectedList?.title} isGhost />
+          <Button
+            type="button"
+            text={selectedList?.title}
+            isGhost
+            className="max-w-40"
+          />
         </Dropdown>
 
         <Dropdown data={otherActionsData}>

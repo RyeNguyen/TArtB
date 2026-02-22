@@ -33,6 +33,7 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
   completedAt?: number;
+  deletedAt?: number;
   subtasks?: Subtask[];
 }
 
