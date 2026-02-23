@@ -66,10 +66,10 @@ interface TodoStore {
     id: string,
     updates: Partial<Omit<Task, "id" | "listId" | "createdAt">>,
   ) => Promise<void>;
-  deleteTask: (id: string) => Promise<void>; // Soft delete (sets deletedAt)
+  deleteTask: (id: string, orderedTaskIds?: string[]) => Promise<void>; // Soft delete (sets deletedAt)
   restoreTask: (id: string) => Promise<void>; // Restore deleted task
   permanentDeleteTask: (id: string) => Promise<void>; // Hard delete (remove from array)
-  duplicateTask: (id: string) => Promise<void>;
+  duplicateTask: (id: string) => Promise<string>; // Returns the new task ID
   toggleTask: (id: string) => Promise<void>;
   reorderTask: (id: string, newOrder: number) => Promise<void>;
   reorderTaskInGroup: (
@@ -90,6 +90,7 @@ interface TodoStore {
   ) => Promise<void>;
   searchTag: (searchTerm: string) => Promise<Tag[]>;
   deleteTag: (id: string) => Promise<void>;
+  duplicateTag: (id: string) => Promise<string>; // Returns the new tag ID
 
   // Subtask actions
   addSubtask: (taskId: string, title: string) => Promise<string>;
@@ -511,8 +512,8 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     }
   },
 
-  deleteTask: async (id) => {
-    const { tasks, setLoading } = get();
+  deleteTask: async (id, orderedTaskIds?: string[]) => {
+    const { tasks, setLoading, selectedTaskId } = get();
     const previousTasks = tasks;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
@@ -522,7 +523,23 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     try {
       const now = Date.now();
       const deletedTask = { ...task, deletedAt: now, updatedAt: now };
-      set({ tasks: tasks.map((t) => (t.id === id ? deletedTask : t)) });
+
+      // If deleting the selected task, select the next one
+      let newSelectedTaskId = selectedTaskId;
+      if (selectedTaskId === id && orderedTaskIds && orderedTaskIds.length > 0) {
+        const currentIndex = orderedTaskIds.indexOf(id);
+        if (currentIndex !== -1) {
+          // Try to select the next task, or previous if it's the last one
+          const nextTaskId = orderedTaskIds[currentIndex + 1] || orderedTaskIds[currentIndex - 1];
+          // Only select if it's not the same task being deleted
+          newSelectedTaskId = nextTaskId !== id ? nextTaskId : null;
+        }
+      }
+
+      set({
+        tasks: tasks.map((t) => (t.id === id ? deletedTask : t)),
+        selectedTaskId: newSelectedTaskId,
+      });
       await todoService.saveTask(deletedTask);
     } catch (error) {
       set({ tasks: previousTasks });
@@ -622,6 +639,8 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
 
       set({ tasks: newTasks });
       await todoService.duplicateTask(id, duplicatedTask);
+
+      return duplicatedTask.id;
     } catch (error) {
       set({ tasks: previousTasks });
       console.error("[TodoStore] Error duplicating task:", error);
@@ -894,6 +913,48 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     } catch (error) {
       set({ tags: previousTags });
       console.error("[TodoStore] Error deleting tag:", error);
+      throw error;
+    }
+  },
+
+  duplicateTag: async (id) => {
+    const { tags } = get();
+    const previousTags = tags;
+
+    try {
+      const originalTag = tags.find((t) => t.id === id);
+      if (!originalTag) {
+        throw new Error("Tag not found");
+      }
+
+      // Sort tags by order to find the next tag
+      const sortedTags = [...tags].sort((a, b) => a.order - b.order);
+      const originalIndex = sortedTags.findIndex((t) => t.id === id);
+      const nextTag = sortedTags[originalIndex + 1];
+
+      // Calculate new order: midpoint between original and next, or +1 if last
+      const newOrder = nextTag
+        ? (originalTag.order + nextTag.order) / 2
+        : originalTag.order + 1;
+
+      const now = Date.now();
+      const duplicatedTag: Tag = {
+        ...originalTag,
+        id: generateId(),
+        title: `${i18next.t("toDo.copyOf")} ${originalTag.title}`,
+        order: newOrder,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      // Add duplicated tag to array (sorting by order will position it correctly)
+      set({ tags: [...tags, duplicatedTag] });
+      await todoService.saveTag(duplicatedTag);
+
+      return duplicatedTag.id;
+    } catch (error) {
+      set({ tags: previousTags });
+      console.error("[TodoStore] Error duplicating tag:", error);
       throw error;
     }
   },

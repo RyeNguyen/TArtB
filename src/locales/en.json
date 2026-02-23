@@ -162,6 +162,11 @@
       "today": "Today",
       "next7Days": "Next 7 Days"
     },
+    "filter": {
+      "completed": "Completed",
+      "deleted": "Deleted",
+      "tag": "Tags"
+    },
     "completed": "Completed",
     "deadline": {
       "clear": "Clear",

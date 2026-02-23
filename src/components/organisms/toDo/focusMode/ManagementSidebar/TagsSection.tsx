@@ -12,6 +12,7 @@ import { TypoVariants, WidgetId, ModalType } from "@constants/common";
 import PlusIcon from "@icons/Plus";
 import EditIcon from "@icons/Edit";
 import DeleteIcon from "@icons/Delete";
+import DuplicateIcon from "@icons/Duplicate";
 import { motion } from "framer-motion";
 import { fadeInOut } from "@animations/hover";
 import React, { useState } from "react";
@@ -41,7 +42,7 @@ import { SortableTagItem } from "./components/SortableTagItem";
 export const TagsSection = () => {
   const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
-  const { tags: storeTags, setSelectedTask, addTag, updateTag, deleteTag } = useTodoStore();
+  const { tags: storeTags, setSelectedTask, addTag, updateTag, deleteTag, duplicateTag } = useTodoStore();
   const { tags, lists } = useTodo();
   const toDoSettings = settings.widgets[WidgetId.TODO];
   const [isHoveringList, setIsHoveringList] = useState(false);
@@ -78,6 +79,21 @@ export const TagsSection = () => {
           title: t("toDo.tag.editTitle"),
           data: tag,
         });
+      },
+    },
+    {
+      label: (
+        <div className="flex items-center gap-2">
+          <DuplicateIcon />
+          <Typography className="text-white">
+            {t("toDo.action.duplicate")}
+          </Typography>
+        </div>
+      ),
+      value: "duplicate",
+      onClick: async () => {
+        setOpenDropdownId(null);
+        await duplicateTag(tag.id);
       },
     },
     {

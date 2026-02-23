@@ -152,6 +152,11 @@
       "today": "Hôm nay",
       "next7Days": "7 Ngày Tới"
     },
+    "filter": {
+      "completed": "Hoàn thành",
+      "deleted": "Đã xóa",
+      "tag": "Nhãn"
+    },
     "completed": "Hoàn thành",
     "deadline": {
       "clear": "Xoá hạn",

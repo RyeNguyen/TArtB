@@ -8,16 +8,24 @@ const CheckCircleIcon = ({ color = "#FFF", size = 24 }: IconProps) => (
     stroke={color}
     stroke-linecap="round"
     stroke-linejoin="round"
-    id="Circle-Check--Streamline-Tabler"
+    id="Arrows-Diagonal--Streamline-Tabler"
     height={size}
     width={size}
   >
     <path
-      d="M2.8 11.2a8.4 8.4 0 1 0 16.8 0 8.4 8.4 0 1 0 -16.8 0"
+      d="m14.933333333333334 3.7333333333333334 3.7333333333333334 0 0 3.7333333333333334"
       stroke-width="1.6"
     ></path>
     <path
-      d="m8.4 11.2 1.8666666666666667 1.8666666666666667 3.7333333333333334 -3.7333333333333334"
+      d="m13.066666666666666 9.333333333333334 5.6 -5.6"
+      stroke-width="1.6"
+    ></path>
+    <path
+      d="m7.466666666666667 18.666666666666668 -3.7333333333333334 0 0 -3.7333333333333334"
+      stroke-width="1.6"
+    ></path>
+    <path
+      d="m3.7333333333333334 18.666666666666668 5.6 -5.6"
       stroke-width="1.6"
     ></path>
   </svg>

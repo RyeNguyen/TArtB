@@ -6,7 +6,7 @@ import { DeletedTasksSection } from "./DeletedTasksSection";
 
 export const ManagementSidebar = () => {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-y-auto">
       <DateFilterSection />
       <ListsSection />
       <TagsSection />

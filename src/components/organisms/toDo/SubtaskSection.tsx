@@ -159,7 +159,10 @@ export const SubtaskSection = ({ taskId, subtasks }: SubtaskSectionProps) => {
       {/* Add Subtask Form */}
       <form onSubmit={handleAddSubtask}>
         <div className="flex items-center gap-1 ml-5.5">
-          <PlusIcon />
+          <div className="ml-2">
+            <PlusIcon />
+          </div>
+
           <input
             ref={inputRef}
             type="text"

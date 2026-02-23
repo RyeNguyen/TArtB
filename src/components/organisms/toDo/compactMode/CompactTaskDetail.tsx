@@ -55,6 +55,7 @@ export const CompactTaskDetail = ({
   );
   const [deadline, setDeadline] = useState<number | undefined>(task.deadline);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -115,11 +116,13 @@ export const CompactTaskDetail = ({
   };
 
   const handleDuplicate = () => {
+    setShowActionsDropdown(false);
     duplicateTask(task.id);
     onClose();
   };
 
   const handleDelete = () => {
+    setShowActionsDropdown(false);
     setShowDeleteConfirm(true);
   };
 
@@ -160,18 +163,23 @@ export const CompactTaskDetail = ({
   );
 
   const otherActionsData = [
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <DuplicateIcon />
-          <Typography className="text-white">
-            {t("toDo.action.duplicate")}
-          </Typography>
-        </div>
-      ),
-      value: OtherTaskActions.DUPLICATE,
-      onClick: handleDuplicate,
-    },
+    // Don't show duplicate action for completed or deleted tasks
+    ...(!task.isCompleted && !task.deletedAt
+      ? [
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <DuplicateIcon />
+                <Typography className="text-white">
+                  {t("toDo.action.duplicate")}
+                </Typography>
+              </div>
+            ),
+            value: OtherTaskActions.DUPLICATE,
+            onClick: handleDuplicate,
+          },
+        ]
+      : []),
     {
       label: (
         <div className="flex items-center gap-2">
@@ -267,7 +275,11 @@ export const CompactTaskDetail = ({
           />
         </Dropdown>
 
-        <Dropdown data={otherActionsData}>
+        <Dropdown
+          data={otherActionsData}
+          open={showActionsDropdown}
+          onOpenChange={(open) => setShowActionsDropdown(open ?? false)}
+        >
           <Button
             type="button"
             icon={MoreIcon}

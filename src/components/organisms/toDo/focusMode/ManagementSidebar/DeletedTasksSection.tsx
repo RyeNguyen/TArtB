@@ -33,7 +33,7 @@ export const DeletedTasksSection = () => {
     !toDoSettings.selectedTagId;
 
   return (
-    <div className="p-2">
+    <div className="p-2 pt-0">
       <div
         className={`flex p-1 rounded-xl gap-1 hover:bg-white/10 items-center justify-between min-w-0 overflow-hidden cursor-pointer ${
           isActive ? "bg-white/20 text-white" : ""
@@ -42,9 +42,7 @@ export const DeletedTasksSection = () => {
       >
         <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           <DeleteIcon />
-          <Typography className="text-text-color truncate">
-            Deleted
-          </Typography>
+          <Typography className="text-text-color truncate">Deleted</Typography>
         </div>
         {deletedTasksCount > 0 && (
           <div className="flex items-center gap-1 px-2 rounded-full bg-white/20 text-sz-small text-white/80">

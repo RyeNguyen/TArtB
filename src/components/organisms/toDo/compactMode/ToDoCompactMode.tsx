@@ -1,6 +1,6 @@
 import { Dropdown } from "@atoms/Dropdown";
 import { Typography } from "@atoms/Typography";
-import { TypoVariants } from "@constants/common";
+import { TypoVariants, DateFilter, WidgetId } from "@constants/common";
 import { useTodo } from "@hooks/useToDo";
 import ChevronIcon from "@icons/Chevron";
 import PlusIcon from "@icons/Plus";
@@ -8,13 +8,15 @@ import SearchIcon from "@icons/SearchIcon";
 import { ToDoFilter } from "@molecules/toDo/toDoFilter";
 import { ToDoForm } from "@organisms/toDo/toDoForm";
 import { ToDoList } from "@organisms/toDo/toDoList";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSettingsStore } from "@stores/settingsStore";
 
 const CREATE_LIST_VALUE = "createList";
 
 export const ToDoCompactMode = () => {
   const { t } = useTranslation();
+  const { settings, updateSettings } = useSettingsStore();
   const {
     setSearchTerm,
     searchTerm,
@@ -22,7 +24,40 @@ export const ToDoCompactMode = () => {
     selectedList,
     handleAddList,
     handleSelectList,
+    toDoSettings,
+    lists,
   } = useTodo();
+
+  // Auto-select first list when compact mode is shown with no list selected
+  // or when other filters (date, tag, completed, deleted) are active
+  useEffect(() => {
+    if (lists.length === 0) return;
+
+    const hasNonListFilter =
+      toDoSettings.showCompleted ||
+      toDoSettings.showDeleted ||
+      toDoSettings.selectedTagId ||
+      toDoSettings.dateFilter !== DateFilter.ALL;
+
+    if (!toDoSettings.selectedListId || hasNonListFilter) {
+      // Clear all non-list filters and select first list in a single update
+      updateSettings({
+        widgets: {
+          ...settings.widgets,
+          [WidgetId.TODO]: {
+            ...toDoSettings,
+            selectedListId: lists[0].id,
+            showCompleted: false,
+            showDeleted: false,
+            selectedTagId: null,
+            dateFilter: DateFilter.ALL,
+          },
+        },
+      });
+    }
+    // Only run on mount to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const listsData = useMemo(() => {
     return searchResults.length > 0
@@ -79,7 +114,7 @@ export const ToDoCompactMode = () => {
         >
           <div className="inline-flex gap-2 items-center cursor-pointer">
             <Typography variant={TypoVariants.SUBTITLE} className="uppercase">
-              {selectedList?.title || t("toDo.myDay")}
+              {selectedList?.title || ""}
             </Typography>
             <ChevronIcon />
           </div>

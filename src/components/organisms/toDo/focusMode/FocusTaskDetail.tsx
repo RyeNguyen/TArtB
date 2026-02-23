@@ -41,8 +41,9 @@ export const FocusTaskDetail = () => {
     duplicateTask,
     moveTaskToList,
     deleteTask,
+    setSelectedTask,
   } = useTodoStore();
-  const { searchResults, selectedList } = useTodo();
+  const { searchResults, selectedList, taskIds } = useTodo();
 
   const selectedTask = selectedTaskId
     ? tasks.find((t) => t.id === selectedTaskId)
@@ -62,6 +63,7 @@ export const FocusTaskDetail = () => {
     selectedTask?.deadline,
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -123,16 +125,21 @@ export const FocusTaskDetail = () => {
     toggleTask(selectedTask?.id || "");
   };
 
-  const handleDuplicate = () => {
-    duplicateTask(selectedTask?.id || "");
+  const handleDuplicate = async () => {
+    setShowActionsDropdown(false);
+    if (!selectedTask?.id) return;
+
+    const newTaskId = await duplicateTask(selectedTask.id);
+    setSelectedTask(newTaskId);
   };
 
   const handleDelete = () => {
+    setShowActionsDropdown(false);
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
-    deleteTask(selectedTask?.id || "");
+    deleteTask(selectedTask?.id || "", taskIds);
   };
 
   const getDeadlineLabel = (): string => {
@@ -167,18 +174,22 @@ export const FocusTaskDetail = () => {
   );
 
   const otherActionsData = [
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <DuplicateIcon />
-          <Typography className="text-white">
-            {t("toDo.action.duplicate")}
-          </Typography>
-        </div>
-      ),
-      value: OtherTaskActions.DUPLICATE,
-      onClick: handleDuplicate,
-    },
+    ...(!selectedTask?.isCompleted && !selectedTask?.deletedAt
+      ? [
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <DuplicateIcon />
+                <Typography className="text-white">
+                  {t("toDo.action.duplicate")}
+                </Typography>
+              </div>
+            ),
+            value: OtherTaskActions.DUPLICATE,
+            onClick: handleDuplicate,
+          },
+        ]
+      : []),
     {
       label: (
         <div className="flex items-center gap-2">
@@ -289,7 +300,11 @@ export const FocusTaskDetail = () => {
               />
             </Dropdown>
 
-            <Dropdown data={otherActionsData}>
+            <Dropdown
+              data={otherActionsData}
+              open={showActionsDropdown}
+              onOpenChange={(open) => setShowActionsDropdown(open ?? false)}
+            >
               <Button
                 type="button"
                 icon={MoreIcon}
