@@ -28,6 +28,7 @@ interface SubtaskListProps {
   onToggle: (subtaskId: string) => void;
   onDelete: (subtaskId: string) => void;
   onReorder: (subtaskId: string, newOrder: number) => void;
+  disabled?: boolean;
 }
 
 export const SubtaskList = ({
@@ -39,6 +40,7 @@ export const SubtaskList = ({
   onToggle,
   onDelete,
   onReorder,
+  disabled = false,
 }: SubtaskListProps) => {
   // Configure sensors with distance activation to avoid conflicts with clicks and input focus
   const sensors = useSensors(
@@ -101,6 +103,27 @@ export const SubtaskList = ({
   }, []);
 
   const subtaskIds = subtasks.map((s) => s.id);
+
+  if (disabled) {
+    // Render without drag and drop when disabled
+    return (
+      <div className="flex flex-col gap-1 opacity-50">
+        {subtasks.map((subtask) => (
+          <SortableSubtaskItem
+            key={subtask.id}
+            subtask={subtask}
+            taskId={taskId}
+            displayTitle={getDisplayTitle(subtask.id, subtask.title)}
+            onTitleChange={onTitleChange}
+            onTitleBlur={onTitleBlur}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            disabled={true}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <DndContext

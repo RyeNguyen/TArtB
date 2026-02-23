@@ -4,14 +4,17 @@ import CalendarIcon from "@icons/Calendar";
 import CalendarDayIcon from "@icons/CalendarDay";
 import CalendarWeekIcon from "@icons/CalendarWeek";
 import { useSettingsStore } from "@stores/settingsStore";
+import { useTodoStore } from "@stores/todoStore";
 import { useTranslation } from "react-i18next";
 
 export const DateFilterSection = () => {
   const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
+  const { setSelectedTask } = useTodoStore();
   const toDoSettings = settings.widgets[WidgetId.TODO];
 
   const handleSelectDateFilter = (filter: DateFilter) => {
+    setSelectedTask(null);
     const updates: Partial<typeof toDoSettings> = {
       dateFilter: filter,
       selectedListId: null,

@@ -154,7 +154,7 @@
     },
     "filter": {
       "completed": "Hoàn thành",
-      "deleted": "Đã xóa",
+      "trash": "Thùng rác",
       "tag": "Nhãn"
     },
     "completed": "Hoàn thành",
@@ -179,7 +179,15 @@
     "action": {
       "edit": "Chỉnh sửa",
       "duplicate": "Tạo bản sao",
-      "delete": "Xoá"
+      "delete": "Xoá",
+      "deleteAll": "Xóa Tất Cả",
+      "restore": "Khôi Phục",
+      "deletePermanently": "Xóa Vĩnh Viễn"
+    },
+    "trash": {
+      "title": "Thùng Rác",
+      "deleteAllTitle": "Xóa Tất Cả Công Việc",
+      "deleteAllMessage": "Bạn có chắc chắn muốn xóa vĩnh viễn tất cả công việc trong thùng rác? Hành động này không thể hoàn tác."
     },
     "subtask": {
       "title": "Công việc con",

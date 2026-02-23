@@ -9,9 +9,10 @@ import { Typography } from "@atoms/Typography";
 interface SubtaskSectionProps {
   taskId: string;
   subtasks: Subtask[];
+  disabled?: boolean;
 }
 
-export const SubtaskSection = ({ taskId, subtasks }: SubtaskSectionProps) => {
+export const SubtaskSection = ({ taskId, subtasks, disabled = false }: SubtaskSectionProps) => {
   const { t } = useTranslation();
   const {
     addSubtask,
@@ -154,25 +155,28 @@ export const SubtaskSection = ({ taskId, subtasks }: SubtaskSectionProps) => {
         onToggle={handleToggleSubtask}
         onDelete={handleDeleteSubtask}
         onReorder={handleReorderSubtask}
+        disabled={disabled}
       />
 
       {/* Add Subtask Form */}
-      <form onSubmit={handleAddSubtask}>
-        <div className="flex items-center gap-1 ml-5.5">
-          <div className="ml-2">
-            <PlusIcon />
-          </div>
+      {!disabled && (
+        <form onSubmit={handleAddSubtask}>
+          <div className="flex items-center gap-1 ml-5.5">
+            <div className="ml-2">
+              <PlusIcon />
+            </div>
 
-          <input
-            ref={inputRef}
-            type="text"
-            value={newSubtaskTitle}
-            onChange={(e) => setNewSubtaskTitle(e.target.value)}
-            placeholder={t("toDo.subtask.placeholder")}
-            className="flex-1 text-white text-sz-default font-light placeholder:text-white/50 outline-none transition-colors"
-          />
-        </div>
-      </form>
+            <input
+              ref={inputRef}
+              type="text"
+              value={newSubtaskTitle}
+              onChange={(e) => setNewSubtaskTitle(e.target.value)}
+              placeholder={t("toDo.subtask.placeholder")}
+              className="flex-1 text-white text-sz-default font-light placeholder:text-white/50 outline-none transition-colors"
+            />
+          </div>
+        </form>
+      )}
     </div>
   );
 };

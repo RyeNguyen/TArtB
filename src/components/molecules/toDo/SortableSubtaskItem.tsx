@@ -13,6 +13,7 @@ interface SortableSubtaskItemProps {
   onTitleBlur: (subtaskId: string) => void;
   onToggle: (subtaskId: string) => void;
   onDelete: (subtaskId: string) => void;
+  disabled?: boolean;
 }
 
 export const SortableSubtaskItem = ({
@@ -23,6 +24,7 @@ export const SortableSubtaskItem = ({
   onTitleBlur,
   onToggle,
   onDelete,
+  disabled = false,
 }: SortableSubtaskItemProps) => {
   const {
     attributes,
@@ -51,26 +53,28 @@ export const SortableSubtaskItem = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-center gap-1.5 rounded-lg hover:bg-white/10 group transition-colors"
+      className={`flex items-center gap-1.5 rounded-lg hover:bg-white/10 group transition-colors ${disabled ? 'pointer-events-none' : ''}`}
     >
-      <div
-        {...listeners}
-        className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity"
-        style={{ touchAction: "none" }}
-      >
-        <DragListIcon />
-      </div>
+      {!disabled && (
+        <div
+          {...listeners}
+          className="opacity-0 group-hover:opacity-50 hover:opacity-100! cursor-grab active:cursor-grabbing transition-opacity"
+          style={{ touchAction: "none" }}
+        >
+          <DragListIcon />
+        </div>
+      )}
 
       <Checkbox
         checked={subtask.isCompleted}
-        onClick={() => onToggle(subtask.id)}
+        onClick={() => !disabled && onToggle(subtask.id)}
       />
 
       <input
         type="text"
         value={displayTitle}
-        onChange={(e) => onTitleChange(subtask.id, e.target.value)}
-        onBlur={() => onTitleBlur(subtask.id)}
+        onChange={(e) => !disabled && onTitleChange(subtask.id, e.target.value)}
+        onBlur={() => !disabled && onTitleBlur(subtask.id)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.currentTarget.blur();
@@ -79,18 +83,21 @@ export const SortableSubtaskItem = ({
         onPointerDown={(e) => {
           e.stopPropagation();
         }}
-        disabled={subtask.isCompleted}
+        disabled={subtask.isCompleted || disabled}
+        readOnly={disabled}
         className={`flex-1 text-sz-default font-light text-white outline-none disabled:opacity-50 bg-transparent ${
           subtask.isCompleted ? "line-through" : ""
-        } ${isDragging ? "pointer-events-none" : ""}`}
+        } ${isDragging ? "pointer-events-none" : ""} ${disabled ? 'ml-5.5' : ''}`}
       />
 
-      <button
-        onClick={() => onDelete(subtask.id)}
-        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/20 transition-all disabled:opacity-50"
-      >
-        <DeleteIcon />
-      </button>
+      {!disabled && (
+        <button
+          onClick={() => onDelete(subtask.id)}
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/20 transition-all disabled:opacity-50"
+        >
+          <DeleteIcon />
+        </button>
+      )}
     </div>
   );
 };

@@ -216,8 +216,10 @@ export const useTodo = () => {
   }, [selectedListId, tasks, toDoSettings.sortBy, toDoSettings.selectedTagId, toDoSettings.dateFilter, toDoSettings.selectedListId, toDoSettings.showCompleted, toDoSettings.showDeleted, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
-    return groupTasks(filteredTasks, toDoSettings.groupBy, t, { tags });
-  }, [filteredTasks, toDoSettings.groupBy, t, tags]);
+    // Don't group deleted tasks - show them as a flat list
+    const groupBy = toDoSettings.showDeleted ? "none" : toDoSettings.groupBy;
+    return groupTasks(filteredTasks, groupBy as any, t, { tags });
+  }, [filteredTasks, toDoSettings.groupBy, toDoSettings.showDeleted, t, tags]);
 
   // Get all task IDs in order for the flat list (needed for SortableContext)
   const taskIds = useMemo(() => {

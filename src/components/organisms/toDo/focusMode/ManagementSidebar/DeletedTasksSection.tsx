@@ -3,16 +3,18 @@ import { WidgetId } from "@constants/common";
 import DeleteIcon from "@icons/Delete";
 import { useSettingsStore } from "@stores/settingsStore";
 import { useTodoStore } from "@stores/todoStore";
+import { useTranslation } from "react-i18next";
 
 export const DeletedTasksSection = () => {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
-  const { tasks } = useTodoStore();
+  const { tasks, setSelectedTask } = useTodoStore();
   const toDoSettings = settings.widgets[WidgetId.TODO];
 
   const deletedTasksCount = tasks.filter((t) => t.deletedAt).length;
 
   const handleSelectDeleted = () => {
-    // Clear all other filters and show deleted tasks view
+    setSelectedTask(null);
     updateSettings({
       widgets: {
         ...settings.widgets,
@@ -42,7 +44,9 @@ export const DeletedTasksSection = () => {
       >
         <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           <DeleteIcon />
-          <Typography className="text-text-color truncate">Deleted</Typography>
+          <Typography className="text-text-color truncate">
+            {t("toDo.trash.title")}
+          </Typography>
         </div>
         {deletedTasksCount > 0 && (
           <div className="flex items-center gap-1 px-2 rounded-full bg-white/20 text-sz-small text-white/80">

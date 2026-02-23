@@ -164,7 +164,7 @@
     },
     "filter": {
       "completed": "Completed",
-      "deleted": "Deleted",
+      "trash": "Trash",
       "tag": "Tags"
     },
     "completed": "Completed",
@@ -188,7 +188,15 @@
     "action": {
       "edit": "Edit",
       "duplicate": "Duplicate",
-      "delete": "Delete"
+      "delete": "Delete",
+      "deleteAll": "Delete All",
+      "restore": "Restore",
+      "deletePermanently": "Delete Permanently"
+    },
+    "trash": {
+      "title": "Trash",
+      "deleteAllTitle": "Delete All Tasks",
+      "deleteAllMessage": "Are you sure you want to permanently delete all tasks in trash? This action cannot be undone."
     },
     "subtask": {
       "title": "Sub-tasks",

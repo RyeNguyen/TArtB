@@ -6,7 +6,7 @@ import { useTodoStore } from "@stores/todoStore";
 
 export const CompletedTasksSection = () => {
   const { settings, updateSettings } = useSettingsStore();
-  const { tasks } = useTodoStore();
+  const { tasks, setSelectedTask } = useTodoStore();
   const toDoSettings = settings.widgets[WidgetId.TODO];
 
   const completedTasksCount = tasks.filter(
@@ -14,6 +14,7 @@ export const CompletedTasksSection = () => {
   ).length;
 
   const handleSelectCompleted = () => {
+    setSelectedTask(null);
     // Clear all other filters and show completed tasks view
     updateSettings({
       widgets: {

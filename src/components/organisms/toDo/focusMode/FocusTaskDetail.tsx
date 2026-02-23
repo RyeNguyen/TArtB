@@ -28,6 +28,7 @@ import MoreIcon from "@icons/More";
 import DeleteIcon from "@icons/Delete";
 import { ConfirmDialog } from "@atoms/ConfirmDialog";
 import DuplicateIcon from "@icons/Duplicate";
+import RestoreIcon from "@icons/Restore";
 
 const localeMap: Record<string, Locale> = { vi, en: enUS };
 
@@ -42,6 +43,8 @@ export const FocusTaskDetail = () => {
     moveTaskToList,
     deleteTask,
     setSelectedTask,
+    restoreTask,
+    permanentDeleteTask,
   } = useTodoStore();
   const { searchResults, selectedList, taskIds } = useTodo();
 
@@ -94,12 +97,14 @@ export const FocusTaskDetail = () => {
   }, [description, autoResize]);
 
   const handleTitleBlur = () => {
+    if (selectedTask?.deletedAt) return;
     if (title.trim() && title !== selectedTask?.title) {
       updateTask(selectedTask?.id || "", { title: title.trim() });
     }
   };
 
   const handleDescriptionBlur = () => {
+    if (selectedTask?.deletedAt) return;
     if (description !== (selectedTask?.description || "")) {
       updateTask(selectedTask?.id || "", {
         description: description || undefined,
@@ -108,17 +113,20 @@ export const FocusTaskDetail = () => {
   };
 
   const handlePriorityChange = (value: string) => {
+    if (selectedTask?.deletedAt) return;
     const newPriority = value as TaskPriorityType;
     setPriority(newPriority);
     updateTask(selectedTask?.id || "", { priority: newPriority });
   };
 
   const handleDeadlineChange = (value: number | undefined) => {
+    if (selectedTask?.deletedAt) return;
     setDeadline(value);
     updateTask(selectedTask?.id || "", { deadline: value });
   };
 
   const handleToggle = (e: React.MouseEvent) => {
+    if (selectedTask?.deletedAt) return;
     if (!selectedTask?.isCompleted) {
       fireConfetti?.(e.clientX, e.clientY);
     }
@@ -139,7 +147,17 @@ export const FocusTaskDetail = () => {
   };
 
   const handleConfirmDelete = () => {
-    deleteTask(selectedTask?.id || "", taskIds);
+    if (selectedTask?.deletedAt) {
+      permanentDeleteTask(selectedTask.id);
+    } else {
+      deleteTask(selectedTask?.id || "", taskIds);
+    }
+  };
+
+  const handleRestore = async () => {
+    setShowActionsDropdown(false);
+    if (!selectedTask?.id) return;
+    await restoreTask(selectedTask.id);
   };
 
   const getDeadlineLabel = (): string => {
@@ -173,36 +191,65 @@ export const FocusTaskDetail = () => {
     [selectedTask],
   );
 
-  const otherActionsData = [
-    ...(!selectedTask?.isCompleted && !selectedTask?.deletedAt
-      ? [
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <DuplicateIcon />
-                <Typography className="text-white">
-                  {t("toDo.action.duplicate")}
-                </Typography>
-              </div>
-            ),
-            value: OtherTaskActions.DUPLICATE,
-            onClick: handleDuplicate,
-          },
-        ]
-      : []),
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <DeleteIcon color={COLORS.ERROR_400} />
-          <Typography className="text-error-400!">
-            {t("toDo.action.delete")}
-          </Typography>
-        </div>
-      ),
-      value: OtherTaskActions.DELETE,
-      onClick: handleDelete,
-    },
-  ];
+  const otherActionsData = selectedTask?.deletedAt
+    ? [
+        // Actions for deleted tasks
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <RestoreIcon />
+              <Typography className="text-white">
+                {t("toDo.action.restore")}
+              </Typography>
+            </div>
+          ),
+          value: "restore",
+          onClick: handleRestore,
+        },
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <DeleteIcon color={COLORS.ERROR_400} />
+              <Typography className="text-error-400!">
+                {t("toDo.action.deletePermanently")}
+              </Typography>
+            </div>
+          ),
+          value: OtherTaskActions.DELETE,
+          onClick: handleDelete,
+        },
+      ]
+    : [
+        // Actions for normal tasks
+        ...(!selectedTask?.isCompleted
+          ? [
+              {
+                label: (
+                  <div className="flex items-center gap-2">
+                    <DuplicateIcon />
+                    <Typography className="text-white">
+                      {t("toDo.action.duplicate")}
+                    </Typography>
+                  </div>
+                ),
+                value: OtherTaskActions.DUPLICATE,
+                onClick: handleDuplicate,
+              },
+            ]
+          : []),
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <DeleteIcon color={COLORS.ERROR_400} />
+              <Typography className="text-error-400!">
+                {t("toDo.action.delete")}
+              </Typography>
+            </div>
+          ),
+          value: OtherTaskActions.DELETE,
+          onClick: handleDelete,
+        },
+      ];
 
   return (
     <div
@@ -211,7 +258,9 @@ export const FocusTaskDetail = () => {
     >
       {selectedTask ? (
         <>
-          <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-white/20 pb-4 shrink-0">
+          <div
+            className={`px-4 py-3 flex items-center justify-between gap-3 border-b border-white/20 pb-4 shrink-0 ${selectedTask.deletedAt ? "opacity-50 pointer-events-none" : ""}`}
+          >
             <Checkbox
               checked={selectedTask.isCompleted}
               borderColor={priorityConfig[priority].color}
@@ -261,7 +310,8 @@ export const FocusTaskDetail = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={handleTitleBlur}
                 placeholder={t("toDo.detail.addTitle")}
-                className={`w-full text-white text-sz-large font-medium placeholder:text-white/50 outline-none resize-none overflow-y-hidden`}
+                className={`w-full text-white text-sz-large font-medium placeholder:text-white/50 outline-none resize-none overflow-y-hidden ${selectedTask.deletedAt ? "opacity-50" : ""}`}
+                readOnly={!!selectedTask.deletedAt}
               />
 
               {/* <TagDisplay task={task} /> */}
@@ -273,37 +323,42 @@ export const FocusTaskDetail = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={handleDescriptionBlur}
                 placeholder={t("toDo.detail.addDescription")}
-                className="w-full text-white text-sz-default font-light placeholder:text-white/50 outline-none resize-none overflow-y-hidden"
+                className={`w-full text-white text-sz-default font-light placeholder:text-white/50 outline-none resize-none overflow-y-hidden ${selectedTask.deletedAt ? "opacity-50" : ""}`}
+                readOnly={!!selectedTask.deletedAt}
               />
               <SubtaskSection
                 taskId={selectedTaskId || ""}
                 subtasks={selectedTask.subtasks || []}
+                disabled={!!selectedTask.deletedAt}
               />
             </div>
           </div>
 
           <div className="px-4 py-3 flex items-center justify-between border-t border-white/20 shrink-0">
-            <Dropdown
-              value={selectedTask?.listId}
-              onChange={(listId: string) =>
-                onAssignTaskToList(selectedTask?.id || "", listId)
-              }
-              menuClassName="max-w-80"
-              header={t("toDo.detail.moveTo")}
-              data={listsData}
-            >
-              <Button
-                type="button"
-                text={selectedList?.title}
-                isGhost
-                className="max-w-40"
-              />
-            </Dropdown>
+            {!selectedTask.deletedAt && (
+              <Dropdown
+                value={selectedTask?.listId}
+                onChange={(listId: string) =>
+                  onAssignTaskToList(selectedTask?.id || "", listId)
+                }
+                menuClassName="max-w-80"
+                header={t("toDo.detail.moveTo")}
+                data={listsData}
+              >
+                <Button
+                  type="button"
+                  text={selectedList?.title}
+                  isGhost
+                  className="max-w-40"
+                />
+              </Dropdown>
+            )}
 
             <Dropdown
               data={otherActionsData}
               open={showActionsDropdown}
               onOpenChange={(open) => setShowActionsDropdown(open ?? false)}
+              className={selectedTask.deletedAt ? "ml-auto" : ""}
             >
               <Button
                 type="button"
