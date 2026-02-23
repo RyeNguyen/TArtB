@@ -7,7 +7,7 @@ import { useToastStore } from "@stores/toastStore";
 import { WidgetId, TaskSortBy, TaskPriorityType, DateFilter } from "@constants/common";
 import { Tag, Task, TaskList } from "@/types/toDo";
 import { sortTasks } from "@utils/toDo/taskSortUtils";
-import { groupTasks } from "@utils/toDo/taskGroupUtils";
+import { groupTasks, groupCompletedTasks } from "@utils/toDo/taskGroupUtils";
 import {
   calculateNewTaskOrder,
   getPropertyUpdatesForCrossGroupDrag,
@@ -216,10 +216,14 @@ export const useTodo = () => {
   }, [selectedListId, tasks, toDoSettings.sortBy, toDoSettings.selectedTagId, toDoSettings.dateFilter, toDoSettings.selectedListId, toDoSettings.showCompleted, toDoSettings.showDeleted, getTasksByList]);
 
   const groupedTasks = useMemo(() => {
+    // Special grouping for completed tasks - group by completion date
+    if (toDoSettings.showCompleted) {
+      return groupCompletedTasks(filteredTasks, t);
+    }
     // Don't group deleted tasks - show them as a flat list
     const groupBy = toDoSettings.showDeleted ? "none" : toDoSettings.groupBy;
     return groupTasks(filteredTasks, groupBy as any, t, { tags });
-  }, [filteredTasks, toDoSettings.groupBy, toDoSettings.showDeleted, t, tags]);
+  }, [filteredTasks, toDoSettings.groupBy, toDoSettings.showDeleted, toDoSettings.showCompleted, t, tags]);
 
   // Get all task IDs in order for the flat list (needed for SortableContext)
   const taskIds = useMemo(() => {

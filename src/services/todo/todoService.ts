@@ -25,6 +25,11 @@ export interface TodoService {
   saveTags(tags: Tag[]): Promise<void>;
   clear(): Promise<void>;
 
+  // Auth-related methods (only in HybridTodoService)
+  onInitialAuthDetection?(): Promise<TodoData>;
+  onSignIn?(): Promise<TodoData>;
+  onSignOut?(): Promise<void>;
+
   // Granular List operations
   saveList(list: TaskList): Promise<void>;
   deleteListById(id: string): Promise<void>;
@@ -878,6 +883,35 @@ class HybridTodoService implements TodoService {
   ): Promise<void> {
     await this.localService.updateTasksOrders(updates);
     this.syncToCloud(() => this.firestoreService!.updateTasksOrders(updates));
+  }
+
+  /**
+   * Handle initial auth detection (user already signed in on page load)
+   * Just load from cloud and update local, don't upload
+   */
+  async onInitialAuthDetection(): Promise<TodoData> {
+    const user = auth.currentUser;
+    if (!user) {
+      return this.localService.load();
+    }
+
+    console.log("[Sync] Initial auth detection, loading from cloud");
+
+    this.ensureFirestoreService();
+
+    // Load from cloud only
+    const cloudData = await this.firestoreService!.load();
+
+    // Update local storage with cloud data (cloud is source of truth)
+    await this.localService.saveLists(cloudData.lists);
+    await this.localService.saveTasks(cloudData.tasks);
+    await this.localService.saveTags(cloudData.tags);
+
+    // Remember this user
+    await this.localService.setLastUserId(user.uid);
+
+    console.log("[Sync] Initial auth detection complete, loaded from cloud");
+    return cloudData;
   }
 
   /**

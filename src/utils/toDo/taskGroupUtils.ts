@@ -214,6 +214,78 @@ function createCompletedGroup(tasks: Task[], t: TranslateFunction): TaskGroup {
 }
 
 /**
+ * Group completed tasks by their completion date (Today, Yesterday, exact dates)
+ */
+function groupByCompletedDate(tasks: Task[], t: TranslateFunction): TaskGroup[] {
+  const groups: TaskGroup[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTs = today.getTime();
+  const yesterdayTs = todayTs - DAY_MS;
+
+  // Group tasks by date string
+  const tasksByDate = new Map<string, Task[]>();
+
+  for (const task of tasks) {
+    const completedAt = task.completedAt || task.updatedAt; // Fallback to updatedAt for legacy tasks
+    const completedDate = new Date(completedAt);
+    completedDate.setHours(0, 0, 0, 0);
+    const completedDateTs = completedDate.getTime();
+
+    let dateKey: string;
+
+    if (completedDateTs === todayTs) {
+      dateKey = "today";
+    } else if (completedDateTs === yesterdayTs) {
+      dateKey = "yesterday";
+    } else {
+      // Use timestamp as key for other dates
+      dateKey = completedDateTs.toString();
+    }
+
+    if (!tasksByDate.has(dateKey)) {
+      tasksByDate.set(dateKey, []);
+    }
+    tasksByDate.get(dateKey)!.push(task);
+  }
+
+  // Convert to groups array, sorted by date (most recent first)
+  const sortedEntries = Array.from(tasksByDate.entries()).sort((a, b) => {
+    // Special handling for "today" and "yesterday"
+    if (a[0] === "today") return -1;
+    if (b[0] === "today") return 1;
+    if (a[0] === "yesterday") return -1;
+    if (b[0] === "yesterday") return 1;
+
+    // For other dates, sort by timestamp (most recent first)
+    return Number(b[0]) - Number(a[0]);
+  });
+
+  for (const [dateKey, tasks] of sortedEntries) {
+    const label =
+      dateKey === "today"
+        ? t("toDo.groupBy.today")
+        : dateKey === "yesterday"
+          ? t("toDo.groupBy.yesterday")
+          : new Date(Number(dateKey)).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+
+    groups.push({
+      id: `completedDate:${dateKey}`,
+      label,
+      tasks,
+      groupValue: dateKey,
+      isDroppable: false,
+    });
+  }
+
+  return groups;
+}
+
+/**
  * Group tasks based on the specified grouping criteria
  * @param tasks - Array of tasks to group (should be sorted before grouping)
  * @param groupBy - Grouping criteria (PRIORITY, DATE, DUE_DATE, TAGS, NONE)
@@ -272,4 +344,18 @@ export function groupTasks(
   }
 
   return groups;
+}
+
+/**
+ * Group completed tasks by completion date
+ * Used for the completed tasks view
+ * @param tasks - Array of completed tasks
+ * @param t - Translation function for labels
+ * @returns Array of task groups by completion date
+ */
+export function groupCompletedTasks(
+  tasks: Task[],
+  t: TranslateFunction,
+): TaskGroup[] {
+  return groupByCompletedDate(tasks, t);
 }

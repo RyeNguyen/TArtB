@@ -36,7 +36,7 @@ interface TodoStore {
 
   // Initialization & Sync
   loadData: () => Promise<void>;
-  onAuthStateChange: (isAuthenticated: boolean) => Promise<void>;
+  onAuthStateChange: (isAuthenticated: boolean, isInitialLoad?: boolean) => Promise<void>;
   setupRealtimeSync: () => void;
   cleanupRealtimeSync: () => void;
 
@@ -199,21 +199,30 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     });
   },
 
-  onAuthStateChange: async (isAuthenticated) => {
+  onAuthStateChange: async (isAuthenticated, isInitialLoad = false) => {
     const { cleanupRealtimeSync, setupRealtimeSync } = get();
 
     if (isAuthenticated) {
       set({ isSyncing: true });
       try {
-        // Sign in: merge local ↔ cloud, setup real-time sync
-        const mergedData = await todoService.onSignIn();
+        let data;
+        if (isInitialLoad) {
+          // Initial load: Just load from cloud, don't merge/upload
+          console.log("[TodoStore] Initial auth detection, loading from cloud...");
+          data = await todoService.onInitialAuthDetection();
+        } else {
+          // Actual sign-in: merge local ↔ cloud, setup real-time sync
+          console.log("[TodoStore] Sign-in detected, merging data...");
+          data = await todoService.onSignIn();
+        }
+
         set({
-          lists: mergedData.lists,
-          tasks: mergedData.tasks,
-          tags: mergedData.tags,
+          lists: data.lists,
+          tasks: data.tasks,
+          tags: data.tags,
           isLoaded: true,
           hasInitializedDefaultList:
-            mergedData.lists.length > 0
+            data.lists.length > 0
               ? true
               : get().hasInitializedDefaultList,
         });

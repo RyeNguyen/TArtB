@@ -74,7 +74,7 @@ export const ToDoFocusMode = () => {
                   iconColor={COLORS.WHITE}
                   className="bg-error-400!"
                 />
-              ) : !toDoSettings.showDeleted ? (
+              ) : !toDoSettings.showDeleted && !toDoSettings.showCompleted ? (
                 <ToDoFilter />
               ) : null}
             </div>

@@ -46,7 +46,7 @@ export const FocusTaskDetail = () => {
     restoreTask,
     permanentDeleteTask,
   } = useTodoStore();
-  const { searchResults, selectedList, taskIds } = useTodo();
+  const { searchResults, taskIds, lists } = useTodo();
 
   const selectedTask = selectedTaskId
     ? tasks.find((t) => t.id === selectedTaskId)
@@ -191,6 +191,11 @@ export const FocusTaskDetail = () => {
     [selectedTask],
   );
 
+  const taskList = useMemo(() => {
+    if (!selectedTask) return null;
+    return lists.find((list) => list.id === selectedTask.listId);
+  }, [selectedTask, lists]);
+
   const otherActionsData = selectedTask?.deletedAt
     ? [
         // Actions for deleted tasks
@@ -254,7 +259,7 @@ export const FocusTaskDetail = () => {
   return (
     <div
       className="h-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: selectedList?.color }}
+      style={{ backgroundColor: taskList?.color }}
     >
       {selectedTask ? (
         <>
@@ -347,7 +352,7 @@ export const FocusTaskDetail = () => {
               >
                 <Button
                   type="button"
-                  text={selectedList?.title}
+                  text={taskList?.title}
                   isGhost
                   className="max-w-40"
                 />

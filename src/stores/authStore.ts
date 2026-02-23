@@ -42,12 +42,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       });
 
       // Handle auth state changes for todo sync
-      // Skip if first load and not authenticated (no need to reload local data)
-      if (!isFirstLoad || isAuthenticated) {
-        // Only trigger if auth state actually changed
-        if (wasAuthenticated !== isAuthenticated) {
-          await useTodoStore.getState().onAuthStateChange(isAuthenticated);
-        }
+      if (isFirstLoad && isAuthenticated) {
+        // Initial load with authenticated user: Just load from cloud, don't merge/upload
+        await useTodoStore.getState().onAuthStateChange(isAuthenticated, true);
+      } else if (wasAuthenticated !== isAuthenticated) {
+        // Actual auth state change: Do full merge and upload
+        await useTodoStore.getState().onAuthStateChange(isAuthenticated, false);
       }
 
       previousUser = user;
